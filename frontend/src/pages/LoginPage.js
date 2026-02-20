@@ -27,10 +27,10 @@ async function uploadAvatarToCloudinary(file) {
   return data.secure_url; // save to Mongo as image_url
 }
 
-const BASE_URL_Login = "http://localhost:8000/api/login";
-const BASE_URL_SignUp = "http://localhost:8000/api/signup";
-const BASE_URL_NEWPASS = "http://localhost:8000/api/newpass"; // only if you actually created this route
+const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 
+const BASE_URL_Login = `${API_BASE}/api/login`;
+const BASE_URL_SignUp = `${API_BASE}/api/signup`;
 function LoginPage() {
   // LOGIN
   const [loginUsername, setLoginUsername] = useState("");

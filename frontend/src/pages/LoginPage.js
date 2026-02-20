@@ -1,0 +1,505 @@
+import React, { useState } from "react";
+import axios from "axios";
+
+const CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
+const UPLOAD_PRESET = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET;
+
+async function uploadAvatarToCloudinary(file) {
+  if (!CLOUD_NAME || !UPLOAD_PRESET) {
+    throw new Error(
+      "Missing Cloudinary env vars. Add REACT_APP_CLOUDINARY_CLOUD_NAME and REACT_APP_CLOUDINARY_UPLOAD_PRESET in .env, then restart React."
+    );
+  }
+
+  const form = new FormData();
+  form.append("file", file);
+  form.append("upload_preset", UPLOAD_PRESET);
+  // preset already sets folder=profiles, so no need to send folder
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+    method: "POST",
+    body: form,
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || "Cloudinary upload failed");
+
+  return data.secure_url; // save to Mongo as image_url
+}
+
+const BASE_URL_Login = "http://localhost:8000/api/login";
+const BASE_URL_SignUp = "http://localhost:8000/api/signup";
+const BASE_URL_NEWPASS = "http://localhost:8000/api/newpass"; // only if you actually created this route
+
+function LoginPage() {
+  // LOGIN
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
+  // SIGN UP
+  const [signupUsername, setSignupUsername] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupName, setSignupName] = useState("");
+  const [signupAge, setSignupAge] = useState("");
+  const [signupOrientation, setSignupOrientation] = useState("");
+  const [signupLookingFor, setSignupLookingFor] = useState("");
+  const [signupImageUrl, setSignupImageUrl] = useState(""); // optional manual URL
+  const [signupAvatarFile, setSignupAvatarFile] = useState(null); // ✅ file upload
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const [signupCity, setSignupCity] = useState("");
+  const [signupGender, setSignupGender] = useState("");
+  const [signupInfo, setSignupInfo] = useState("");
+  const [signupContact, setSignupContact] = useState("");
+
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [newpassword, setnewpassword] = useState("");
+  const [confirmpass, setconfirmpass] = useState("");
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+
+    try {
+      const res = await axios.post(BASE_URL_NEWPASS, {
+        newPassword: newpassword,
+        confirmpass: confirmpass,
+      });
+
+      alert(res.data.message);
+      setShowForgotPassword(false);
+    } catch (err) {
+      if (err.response?.data?.error) alert(`❌ ${err.response.data.error}`);
+      else alert("❌ Unexpected error occurred.");
+      console.error(err);
+    }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post(BASE_URL_Login, {
+        username: loginUsername,
+        password: loginPassword,
+      });
+
+      if (res.data.user_id) localStorage.setItem("user_id", res.data.user_id);
+      if (res.data.token) localStorage.setItem("token", res.data.token);
+
+      alert(res.data.message || "Logged in!");
+      window.location.href = "/home";
+    } catch (err) {
+      const errorMsg = err?.response?.data?.error || err.message || "Login failed";
+      alert(errorMsg);
+    }
+  };
+
+  const handleSignup = async (e) => {
+    e.preventDefault();
+
+    try {
+      let finalImageUrl = signupImageUrl ? signupImageUrl : null;
+
+      // ✅ if file selected, upload to Cloudinary and use that URL
+      if (signupAvatarFile) {
+        setUploadingAvatar(true);
+        finalImageUrl = await uploadAvatarToCloudinary(signupAvatarFile);
+        setUploadingAvatar(false);
+      }
+
+      const payload = {
+        username: signupUsername,
+        password: signupPassword,
+        name: signupName,
+        age: Number(signupAge),
+        orientation: signupOrientation,
+        looking_for: signupLookingFor,
+        image_url: finalImageUrl,
+        city: signupCity,
+        gender: signupGender,
+        info: signupInfo,
+        contact: signupContact,
+      };
+
+      const res = await axios.post(BASE_URL_SignUp, payload);
+
+      alert(res.data.message || "Signed up!");
+    } catch (err) {
+      setUploadingAvatar(false);
+      const errorMsg = err?.response?.data?.error || err.message || "Sign up failed";
+      alert(errorMsg);
+    }
+  };
+
+  return (
+    <>
+      <style>{`
+        .wrapper {
+          --input-focus: #2d8cf0;
+          --font-color: #323232;
+          --font-color-sub: #666;
+          --bg-color: #fff;
+          --bg-color-alt: #666;
+          --main-color: #323232;
+        }
+
+        .switch {
+          transform: translateY(-200px);
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          gap: 30px;
+          width: 50px;
+          height: 20px;
+        }
+
+        body{
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 400px;
+          font-family: 'Poppins', sans-serif;
+          background: linear-gradient(115deg, #dfdfdf 10%, #280239 90%);
+        }
+
+        .card-side::before {
+          position: absolute;
+          content: 'Log in';
+          left: -70px;
+          top: 0;
+          width: 100px;
+          text-decoration: underline;
+          color: var(--font-color);
+          font-weight: 600;
+        }
+
+        .card-side::after {
+          position: absolute;
+          content: 'Sign up';
+          left: 70px;
+          top: 0;
+          width: 100px;
+          text-decoration: none;
+          color: var(--font-color);
+          font-weight: 600;
+        }
+
+        .toggle { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+          box-sizing: border-box;
+          border-radius: 5px;
+          border: 2px solid var(--main-color);
+          box-shadow: 4px 4px var(--main-color);
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: var(--bg-color);
+          transition: 0.3s;
+        }
+
+        .slider:before {
+          box-sizing: border-box;
+          position: absolute;
+          content: "";
+          height: 20px;
+          width: 20px;
+          border: 2px solid var(--main-color);
+          border-radius: 5px;
+          left: -2px;
+          bottom: 2px;
+          background-color: var(--bg-color);
+          box-shadow: 0 3px 0 var(--main-color);
+          transition: 0.3s;
+        }
+
+        .toggle:checked + .slider { background-color: var(--input-focus); }
+        .toggle:checked + .slider:before { transform: translateX(30px); }
+        .toggle:checked ~ .card-side:before { text-decoration: none; }
+        .toggle:checked ~ .card-side:after { text-decoration: underline; }
+
+        .flip-card__inner {
+          width: 300px;
+          height: 520px; /* increased for file input + textarea */
+          position: relative;
+          background-color: transparent;
+          perspective: 1000px;
+          text-align: center;
+          transition: transform 0.8s;
+          transform-style: preserve-3d;
+        }
+
+        .toggle:checked ~ .flip-card__inner { transform: rotateY(180deg); }
+
+        .flip-card__front,
+        .flip-card__back {
+          padding: 20px;
+          position: absolute;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          -webkit-backface-visibility: hidden;
+          backface-visibility: hidden;
+          background: lightgrey;
+          gap: 14px;
+          border-radius: 5px;
+          border: 2px solid var(--main-color);
+          box-shadow: 4px 4px var(--main-color);
+        }
+
+        .flip-card__back { width: 100%; transform: rotateY(180deg); }
+
+        .flip-card__form {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .title {
+          margin: 10px 0;
+          font-size: 25px;
+          font-weight: 900;
+          text-align: center;
+          color: var(--main-color);
+        }
+
+        .flip-card__input {
+          width: 250px;
+          height: 40px;
+          border-radius: 5px;
+          border: 2px solid var(--main-color);
+          background-color: var(--bg-color);
+          box-shadow: 4px 4px var(--main-color);
+          font-size: 15px;
+          font-weight: 600;
+          color: var(--font-color);
+          padding: 5px 10px;
+          outline: none;
+        }
+
+        .flip-card__input::placeholder { color: var(--font-color-sub); opacity: 0.8; }
+        .flip-card__input:focus { border: 2px solid var(--input-focus); }
+
+        .flip-card__btn {
+          margin: 10px 0;
+          width: 140px;
+          height: 40px;
+          border-radius: 5px;
+          border: 2px solid var(--main-color);
+          background-color: var(--bg-color);
+          box-shadow: 4px 4px var(--main-color);
+          font-size: 17px;
+          font-weight: 600;
+          color: var(--font-color);
+          cursor: pointer;
+        }
+
+        .flip-card__btn:active {
+          box-shadow: 0px 0px var(--main-color);
+          transform: translate(3px, 3px);
+        }
+
+        .helper {
+          width: 250px;
+          font-size: 12px;
+          color: #333;
+          opacity: 0.85;
+          text-align: left;
+        }
+      `}</style>
+
+      <div className="wrapper">
+        <div className="card-switch">
+          <label className="switch">
+            <input type="checkbox" className="toggle" />
+            <span className="slider"></span>
+            <span className="card-side"></span>
+
+            <div className="flip-card__inner">
+              {/* FRONT = LOGIN */}
+              <div className="flip-card__front">
+                <div className="title">Log in</div>
+
+                <form className="flip-card__form" onSubmit={handleLogin}>
+                  <input
+                    className="flip-card__input"
+                    name="username"
+                    placeholder="user_name"
+                    type="text"
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    required
+                  />
+
+                  <input
+                    className="flip-card__input"
+                    name="password"
+                    placeholder="Password"
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    required
+                  />
+
+                  <button className="flip-card__btn" type="submit">
+                    Let's go!
+                  </button>
+                </form>
+              </div>
+
+              {/* BACK = SIGNUP */}
+              <div className="flip-card__back">
+                <div className="title">Sign up</div>
+
+                <form className="flip-card__form" onSubmit={handleSignup}>
+                  <input
+                    className="flip-card__input"
+                    placeholder="Username"
+                    type="text"
+                    value={signupUsername}
+                    onChange={(e) => setSignupUsername(e.target.value)}
+                    required
+                  />
+
+                  <input
+                    className="flip-card__input"
+                    placeholder="Password"
+                    type="password"
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    required
+                  />
+
+                  <input
+                    className="flip-card__input"
+                    placeholder="Name"
+                    type="text"
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
+                    required
+                  />
+
+                  <input
+                    className="flip-card__input"
+                    placeholder="Age"
+                    type="number"
+                    min="18"
+                    max="120"
+                    value={signupAge}
+                    onChange={(e) => setSignupAge(e.target.value)}
+                    required
+                  />
+
+                  <select
+                    className="flip-card__input"
+                    value={signupOrientation}
+                    onChange={(e) => setSignupOrientation(e.target.value)}
+                    required
+                  >
+                    <option value="">Orientation</option>
+                    <option value="ace">ace</option>
+                    <option value="aro">aro</option>
+                    <option value="aroace">aroace</option>
+                    <option value="demi">demi</option>
+                    <option value="grey-asexual">grey-asexual</option>
+                  </select>
+
+                  <select
+                    className="flip-card__input"
+                    value={signupLookingFor}
+                    onChange={(e) => setSignupLookingFor(e.target.value)}
+                    required
+                  >
+                    <option value="">Looking for</option>
+                    <option value="friendship">friendship</option>
+                    <option value="monogamy-romance">monogamy romance</option>
+                    <option value="qpr">QPR</option>
+                    <option value="polyamory-romance">polyamory romance</option>
+                  </select>
+
+                  {/* ✅ File upload (Cloudinary) */}
+                  <input
+                    className="flip-card__input"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setSignupAvatarFile(e.target.files?.[0] || null)}
+                  />
+                  <div className="helper">
+                    {signupAvatarFile ? `Selected: ${signupAvatarFile.name}` : "Optional: choose an image to upload"}
+                    {uploadingAvatar ? " • Uploading…" : ""}
+                  </div>
+
+
+                  <select
+                    className="flip-card__input"
+                    value={signupCity}
+                    onChange={(e) => setSignupCity(e.target.value)}
+                    required
+                  >
+                    <option value="">City / area</option>
+                    <option value="gush-dan">Gush Dan (Tel Aviv / Ramat Gan / Givatayim / Holon / Bat Yam)</option>
+                    <option value="tel-aviv">Tel Aviv (city)</option>
+                    <option value="jerusalem-area">Jerusalem area</option>
+                    <option value="hasharon">HaSharon (Herzliya / Raanana / Kfar Saba / Netanya)</option>
+                    <option value="shfela">HaShfela (Rishon / Rehovot / Ramla / Lod)</option>
+                    <option value="haifa-krayot">Haifa & Krayot</option>
+                    <option value="north-galilee-golan">North (Galilee / Golan)</option>
+                    <option value="south-ashdod-ashkelon">South coast (Ashdod / Ashkelon)</option>
+                    <option value="negev-beer-sheva">Negev (Beer Sheva area)</option>
+                    <option value="eilat-arava">Eilat / Arava</option>
+                    <option value="west-bank">West Bank</option>
+                    <option value="other-israel">Other / Not sure</option>
+                  </select>
+
+                  <select
+                    className="flip-card__input"
+                    value={signupGender}
+                    onChange={(e) => setSignupGender(e.target.value)}
+                    required
+                  >
+                    <option value="">Gender</option>
+                    <option value="male">male</option>
+                    <option value="female">female</option>
+                    <option value="non-binary">non binary</option>
+                    <option value="other">other</option>
+                  </select>
+
+                  <textarea
+                    className="flip-card__input"
+                    placeholder="Info (max 1000 characters)"
+                    value={signupInfo}
+                    onChange={(e) => setSignupInfo(e.target.value)}
+                    rows={3}
+                    maxLength={1000}
+                    required
+                    style={{ height: 80, resize: "none" }}
+                  />
+
+                  <input
+                    className="flip-card__input"
+                    placeholder="Contact (e.g. Discord / IG / Email)"
+                    type="text"
+                    value={signupContact}
+                    onChange={(e) => setSignupContact(e.target.value)}
+                    required
+                  />
+
+                  <button className="flip-card__btn" type="submit" disabled={uploadingAvatar}>
+                    {uploadingAvatar ? "Uploading…" : "Confirm!"}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default LoginPage;

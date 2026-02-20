@@ -52,27 +52,6 @@ function LoginPage() {
   const [signupInfo, setSignupInfo] = useState("");
   const [signupContact, setSignupContact] = useState("");
 
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [newpassword, setnewpassword] = useState("");
-  const [confirmpass, setconfirmpass] = useState("");
-
-  const handleForgotPassword = async (e) => {
-    e.preventDefault();
-
-    try {
-      const res = await axios.post(BASE_URL_NEWPASS, {
-        newPassword: newpassword,
-        confirmpass: confirmpass,
-      });
-
-      alert(res.data.message);
-      setShowForgotPassword(false);
-    } catch (err) {
-      if (err.response?.data?.error) alert(`❌ ${err.response.data.error}`);
-      else alert("❌ Unexpected error occurred.");
-      console.error(err);
-    }
-  };
 
   const handleLogin = async (e) => {
     e.preventDefault();

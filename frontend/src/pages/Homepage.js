@@ -452,7 +452,7 @@ export default function Homepage() {
                   type="number"
                   min="18"
                   max="120"
-                  placeholder="min"
+                  //placeholder="min"
                   value={ageMin}
                   onChange={(e) => setAgeMin(e.target.value === "" ? "" : String(clampNum(e.target.value, 18, 120)))}
                 />
@@ -462,7 +462,7 @@ export default function Homepage() {
                   type="number"
                   min="18"
                   max="120"
-                  placeholder="max"
+                  //placeholder="max"
                   value={ageMax}
                   onChange={(e) => setAgeMax(e.target.value === "" ? "" : String(clampNum(e.target.value, 18, 120)))}
                 />

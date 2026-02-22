@@ -27,7 +27,8 @@ async function uploadAvatarToCloudinary(file) {
   return data.secure_url; // save to Mongo as image_url
 }
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
+const API_BASE ="http://127.0.0.1:8000";
+//process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 
 const BASE_URL_Login = `${API_BASE}/api/login`;
 const BASE_URL_SignUp = `${API_BASE}/api/signup`;
@@ -44,7 +45,6 @@ function LoginPage() {
   const [signupAge, setSignupAge] = useState("");
   const [signupOrientation, setSignupOrientation] = useState("");
   const [signupLookingFor, setSignupLookingFor] = useState("");
-  const [signupImageUrl, setSignupImageUrl] = useState(""); // optional manual URL
   const [signupAvatarFile, setSignupAvatarFile] = useState(null); // ✅ file upload
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -74,57 +74,50 @@ function LoginPage() {
   };
 
   const handleSignup = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
-      let finalImageUrl = signupImageUrl ? signupImageUrl : null;
+  try {
+    let finalImageUrl = null;
 
-      // ✅ if file selected, upload to Cloudinary and use that URL
-      if (signupAvatarFile) {
-        setUploadingAvatar(true);
-        finalImageUrl = await uploadAvatarToCloudinary(signupAvatarFile);
-        setUploadingAvatar(false);
-      }
-
-      const payload = {
-        username: signupUsername,
-        password: signupPassword,
-        name: signupName,
-        age: Number(signupAge),
-        orientation: signupOrientation,
-        looking_for: signupLookingFor,
-        image_url: finalImageUrl,
-        city: signupCity,
-        gender: signupGender,
-        info: signupInfo,
-        contact: signupContact,
-      };
-
-      const res = await axios.post(BASE_URL_SignUp, payload);
-      alert(res.data.message || "Signed up!");
-
-      try {
-      const res = await axios.post(BASE_URL_Login, {
-        username:signupUsername,
-        password:signupPassword,
-      });
-
-      if (res.data.user_id) localStorage.setItem("user_id", res.data.user_id);
-      if (res.data.token) localStorage.setItem("token", res.data.token);
-
-      //alert(res.data.message || "Logged in!");
-      window.location.href = "/home";
-    } catch (err) {
-      const errorMsg = err?.response?.data?.error || err.message || "Login failed";
-      alert(errorMsg);
-    }
-
-    } catch (err) {
+    // ✅ if file selected, upload to Cloudinary and use that URL
+    if (signupAvatarFile) {
+      setUploadingAvatar(true);
+      finalImageUrl = await uploadAvatarToCloudinary(signupAvatarFile);
       setUploadingAvatar(false);
-      const errorMsg = err?.response?.data?.error || err.message || "Sign up failed";
-      alert(errorMsg);
     }
-  };
+
+    const payload = {
+      username: signupUsername,
+      password: signupPassword,
+      name: signupName,
+      age: Number(signupAge),
+      orientation: signupOrientation,
+      looking_for: signupLookingFor,
+      image_url: finalImageUrl,
+      city: signupCity,
+      gender: signupGender,
+      info: signupInfo,
+      contact: signupContact,
+    };
+
+    await axios.post(BASE_URL_SignUp, payload);
+
+    // auto-login after signup
+    const loginRes = await axios.post(BASE_URL_Login, {
+      username: signupUsername,
+      password: signupPassword,
+    });
+
+    if (loginRes.data.user_id) localStorage.setItem("user_id", loginRes.data.user_id);
+    if (loginRes.data.token) localStorage.setItem("token", loginRes.data.token);
+
+    window.location.href = "/home";
+  } catch (err) {
+    setUploadingAvatar(false);
+    const errorMsg = err?.response?.data?.error || err.message || "Sign up failed";
+    alert(errorMsg);
+  }
+};
 
   return (
     <>

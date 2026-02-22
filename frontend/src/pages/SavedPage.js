@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import TopBar from "./TopBar";
-
 import { useNavigate } from "react-router-dom";
 import { S, ensureHomepageStyles, PLACEHOLDER_AVATAR_URL } from "./homepageStyles";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
+
 const PAGE_SIZE = 24;
 const ORIENTATION_OPTIONS = ["ace", "aro", "aroace", "demi", "grey-asexual"];
 const LOOKING_FOR_OPTIONS = ["friendship", "monogamy-romance", "qpr", "polyamory-romance"];
@@ -121,6 +121,7 @@ function MultiSelect({ label, options, valueSet, onChangeSet, placeholder = "Any
 
 function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
   const [imgOk, setImgOk] = useState(true);
+
   const fallback = `${PLACEHOLDER_AVATAR_URL}&seed=${encodeURIComponent(p.username || "ace")}`;
   const imgSrc = imgOk && p.image_url ? p.image_url : fallback;
 
@@ -198,7 +199,7 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
   );
 }
 
-export default function Homepage() {
+export default function Savedpage() {
   const navigate = useNavigate();
   const myId = useMemo(() => String(localStorage.getItem("user_id") || ""), []);
 
@@ -225,10 +226,7 @@ export default function Homepage() {
   // Data + pagination
   const [profiles, setProfiles] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [cursor, setCursor] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
-
+  
   // Search
   const [q, setQ] = useState("");
 
@@ -243,7 +241,8 @@ export default function Homepage() {
   const [ageMax, setAgeMax] = useState("");
 
   // Favorites (local-only MVP)
-  const [likedIds, setLikedIds] = useState(() => new Set());
+// ✅ Likes from Mongo
+const [likedIds, setLikedIds] = useState(() => new Set());
 
 useEffect(() => {
   if (!myId) return;
@@ -260,69 +259,28 @@ useEffect(() => {
   })();
 }, [myId]);
 
+ const fetchSaved = async () => {
+  try {
+    setInitialLoading(true);
+    const res = await axios.get(`${API_BASE}/api/profilessaved/${myId}`);
+    console.log("Res items:", res);
+    const items = Array.isArray(res.data?.items) ? res.data.items : [];
+    setProfiles(items);
+    console.log("SAVED items:", items);
+  } catch (e) {
+    console.error(e);
+    setProfiles([]);
+    
+  } finally {
+    setInitialLoading(false);
+  }
+};
+
 useEffect(() => {
-  localStorage.setItem("favorites", JSON.stringify(Array.from(likedIds)));
-}, [likedIds]);
-
-  const fetchPage = async (reset = false) => {
-    if (!reset && (loadingMore || !hasMore)) return;
-
-    try {
-      if (reset) {
-        setInitialLoading(true);
-        setLoadingMore(false);
-        setProfiles([]);
-        setCursor(null);
-        setHasMore(true);
-      } else {
-        setLoadingMore(true);
-      }
-
-      const params = { limit: PAGE_SIZE };
-      if (!reset && cursor) params.cursor = cursor;
-
-      const res = await axios.get(`${API_BASE}/api/profiles`, { params });
-
-      const items = Array.isArray(res.data?.items) ? res.data.items : [];
-      const next = res.data?.next_cursor ?? null;
-      const more = !!res.data?.has_more;
-
-      setProfiles((prev) => (reset ? items : [...prev, ...items]));
-      setCursor(next);
-      setHasMore(more);
-    } catch (e) {
-      console.error(e);
-      if (reset) setProfiles([]);
-      setHasMore(false);
-    } finally {
-      setInitialLoading(false);
-      setLoadingMore(false);
-    }
-  };
-
-  // Initial load
-  useEffect(() => {
-    fetchPage(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Infinite scroll sentinel
-  const sentinelRef = useRef(null);
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) fetchPage(false);
-      },
-      { root: null, rootMargin: "700px", threshold: 0 }
-    );
-
-    obs.observe(el);
-    return () => obs.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cursor, hasMore, loadingMore]);
+  if (!myId) return;
+  fetchSaved();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [myId]);
 
   const filtered = useMemo(() => {
     const qq = normalizeText(q).trim();
@@ -542,20 +500,6 @@ return (
               ))}
             </div>
 
-            <div ref={sentinelRef} style={{ height: 1 }} />
-
-            {loadingMore && (
-              <div style={{ ...S.loadingBox, marginTop: 12 }}>
-                <div style={S.spinner} />
-                <div>Loading more…</div>
-              </div>
-            )}
-
-            {!hasMore && profiles.length > 0 && (
-              <div style={{ marginTop: 14, fontSize: 12, color: "#64748b", textAlign: "center" }}>
-                End of results
-              </div>
-            )}
           </>
         ) : (
           <div style={S.empty}>

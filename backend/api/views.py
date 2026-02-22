@@ -7,22 +7,28 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
+from . import dbcommands
 from .mongo import get_db
+import cloudinary
 
+
+# ----------------------------
+# Helpers
+# ----------------------------
 def oid(x):
     """Safe ObjectId converter for ids coming as strings."""
     if isinstance(x, ObjectId):
         return x
     if isinstance(x, str) and ObjectId.is_valid(x.strip()):
         return ObjectId(x.strip())
-    return x
+    return None
 
 
 def serialize_mongo(doc):
     """
     Convert Mongo fields that break JSON (ObjectId, datetime) into safe values.
-    - _id / user_id become strings
-    - datetime becomes ISO string
+    NOTE: This is NOT recursive. Option B avoids returning fields like 'liked'
+    in endpoints that would otherwise crash due to nested ObjectIds.
     """
     if doc is None:
         return None
@@ -38,53 +44,61 @@ def serialize_mongo(doc):
     return out
 
 
+PROFILE_ALLOWED_FIELDS = {
+    "username",
+    "name",
+    "age",
+    "city",
+    "gender",
+    "orientation",
+    "looking_for",
+    "info",
+    "contact",
+    "image_url",
+}
+
+
+# ----------------------------
+# Auth
+# ----------------------------
 class SignUpView(APIView):
     """
-    POST /api/auth/signup
+    POST /api/signup
     Body: { username, password, name, age, orientation, looking_for, image_url, city, gender, info, contact }
-    Creates user + profile and returns token.
+    Creates user and returns token + user_id.
     """
 
     def post(self, request):
         db = get_db()
         users = db["users"]
-        profiles = db["profiles"]
 
         data = request.data
-
         username = (data.get("username") or "").strip()
         password = data.get("password") or ""
 
         if not username or not password:
             return Response({"error": "username and password are required"}, status=400)
 
-        # Unique username
         if users.find_one({"username": username}):
             return Response({"error": "username already exists"}, status=400)
 
-        # Validate age
         try:
             age = int(data.get("age"))
         except Exception:
             return Response({"error": "age must be a number"}, status=400)
 
         now = datetime.utcnow()
-
-        # Create user (Mongo assigns ObjectId)
         token = str(uuid4())
+
         user_doc = {
+            # auth
             "username": username,
             "password_hash": make_password(password),
             "session_token": token,
             "created_at": now,
             "updated_at": now,
-        }
-        user_id = users.insert_one(user_doc).inserted_id  # ObjectId
 
-        # Create profile (store user_id as ObjectId)
-        profile_doc = {
-            "user_id": user_id,
-            "username": username,
+            # profile fields
             "name": (data.get("name") or "").strip() or None,
             "age": age,
             "orientation": data.get("orientation"),
@@ -94,25 +108,24 @@ class SignUpView(APIView):
             "gender": data.get("gender"),
             "info": data.get("info"),
             "contact": data.get("contact"),
-        }
-        profiles.insert_one(profile_doc)
 
-        # IMPORTANT: return ids as strings for React
+            # likes list
+            "liked": [],
+        }
+
+        user_id = users.insert_one(user_doc).inserted_id  # ObjectId
+
         return Response(
             {"message": "Signup successful", "token": token, "user_id": str(user_id)},
             status=status.HTTP_201_CREATED,
         )
 
-class PingView(APIView):
-    def get(self, request):
-        return Response({"message": "pong"}, status=status.HTTP_200_OK)
 
-        
 class LoginView(APIView):
     """
-    POST /api/auth/login
+    POST /api/login
     Body: { username, password }
-    Returns token.
+    Returns token + user_id.
     """
 
     def post(self, request):
@@ -133,7 +146,6 @@ class LoginView(APIView):
         if not check_password(password, user.get("password_hash", "")):
             return Response({"error": "Invalid username or password"}, status=401)
 
-        # Refresh token on login + touch updated_at
         token = str(uuid4())
         users.update_one(
             {"_id": user["_id"]},
@@ -144,43 +156,27 @@ class LoginView(APIView):
             {"message": "Login successful", "token": token, "user_id": str(user["_id"])},
             status=200,
         )
-def oid(x):
-    if isinstance(x, ObjectId):
-        return x
-    if isinstance(x, str) and ObjectId.is_valid(x.strip()):
-        return ObjectId(x.strip())
-    return None
 
 
-def serialize_mongo(doc):
-    if doc is None:
-        return None
-    out = {}
-    for k, v in doc.items():
-        if isinstance(v, ObjectId):
-            out[k] = str(v)
-        elif isinstance(v, datetime):
-            out[k] = v.isoformat() + "Z"
-        else:
-            out[k] = v
-    return out
+class PingView(APIView):
+    def get(self, request):
+        return Response({"message": "pong"}, status=status.HTTP_200_OK)
 
 
+# ----------------------------
+# Profiles list (feed) - now from users
+# OPTION B: exclude 'liked' so ObjectIds in the list never reach JSON renderer
+# ----------------------------
 class ProfilesListView(APIView):
-    """
-    GET /api/profiles?limit=24&cursor=<last_id>
-    Returns: { items: [...], next_cursor: "...", has_more: true/false }
-    """
-
     def get(self, request):
         db = get_db()
-        profiles = db["profiles"]
+        users = db["users"]
 
         try:
             limit = int(request.query_params.get("limit", 24))
         except Exception:
             limit = 24
-        limit = max(1, min(limit, 60))  # protect server
+        limit = max(1, min(limit, 60))
 
         cursor = request.query_params.get("cursor")
         q = {}
@@ -189,28 +185,17 @@ class ProfilesListView(APIView):
             if c:
                 q["_id"] = {"$gt": c}
 
-        # only return safe fields (no password hashes etc.)
+        # exclude sensitive fields + exclude liked (OPTION B FIX)
         projection = {
-            "user_id": 1,
-            "username": 1,
-            "name": 1,
-            "age": 1,
-            "orientation": 1,
-            "looking_for": 1,
-            "image_url": 1,
-            "city": 1,
-            "gender": 1,
-            "info": 1,
-            "contact": 1,
+            "password_hash": 0,
+            "session_token": 0,
+            "liked": 0,
         }
 
-        docs = list(
-            profiles.find(q, projection).sort("_id", 1).limit(limit + 1)
-        )
+        docs = list(users.find(q, projection).sort("_id", 1).limit(limit + 1))
 
         has_more = len(docs) > limit
         docs = docs[:limit]
-
         next_cursor = str(docs[-1]["_id"]) if (has_more and docs) else None
 
         return Response(
@@ -221,3 +206,132 @@ class ProfilesListView(APIView):
             },
             status=200,
         )
+
+
+# ----------------------------
+# Saved profiles (liked) - from users.liked
+# ----------------------------
+class ProfilessavedListView(APIView):
+    def get(self, request, user_id):
+        db = get_db()
+        users = db["users"]
+
+        uid = oid(user_id)
+        if not uid:
+            return Response({"items": []}, status=200)
+
+        me = users.find_one({"_id": uid}, {"liked": 1})
+        liked_raw = (me or {}).get("liked", [])
+
+        liked_ids = []
+        for x in liked_raw:
+            if isinstance(x, ObjectId):
+                liked_ids.append(x)
+            else:
+                o = oid(x)
+                if o:
+                    liked_ids.append(o)
+
+        if not liked_ids:
+            return Response({"items": []}, status=200)
+
+        # IMPORTANT: exclude liked here too (otherwise same crash)
+        docs = list(
+            users.find(
+                {"_id": {"$in": liked_ids}},
+                {"password_hash": 0, "session_token": 0, "liked": 0},
+            )
+        )
+        return Response({"items": [serialize_mongo(d) for d in docs]}, status=200)
+
+
+# ----------------------------
+# Single profile (me) - now from users
+# ----------------------------
+class ProfileView(APIView):
+    def get(self, request, user_id):
+        db = get_db()
+        users = db["users"]
+
+        uid = oid(user_id)
+        if not uid:
+            return Response({"error": "Invalid user id"}, status=400)
+
+        # exclude liked to be safe (optional, but prevents same serialization issue)
+        doc = users.find_one({"_id": uid}, {"password_hash": 0, "session_token": 0, "liked": 0})
+        if not doc:
+            return Response({"error": "Profile not found"}, status=404)
+
+        return Response(serialize_mongo(doc), status=200)
+
+    def put(self, request, user_id):
+        db = get_db()
+        users = db["users"]
+
+        uid = oid(user_id)
+        if not uid:
+            return Response({"error": "Invalid user id"}, status=400)
+
+        requester_id = request.headers.get("X-User-Id") or request.data.get("user_id")
+        if requester_id and str(requester_id) != str(user_id):
+            return Response({"error": "Not allowed"}, status=403)
+
+        data = request.data or {}
+        update_fields = {k: data.get(k) for k in PROFILE_ALLOWED_FIELDS if k in data}
+
+        if "age" in update_fields and update_fields["age"] is not None:
+            try:
+                update_fields["age"] = int(update_fields["age"])
+            except Exception:
+                return Response({"error": "Age must be a number"}, status=400)
+
+        update_fields["updated_at"] = datetime.utcnow()
+        users.update_one({"_id": uid}, {"$set": update_fields})
+
+        # exclude liked to prevent serialization issue
+        doc = users.find_one({"_id": uid}, {"password_hash": 0, "session_token": 0, "liked": 0})
+        return Response(serialize_mongo(doc), status=200)
+
+
+class CloudinaryDeleteView(APIView):
+    def post(self, request):
+        public_id = (request.data.get("public_id") or "").strip()
+        if not public_id:
+            return Response({"error": "public_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            result = cloudinary.uploader.destroy(public_id)
+            return Response({"result": result.get("result", "unknown")}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class LikesView(APIView):
+    # GET /api/likes/<user_id> -> {"liked": ["id1","id2",...]}
+    def get(self, request, user_id):
+        try:
+            liked_ids = dbcommands.get_user_liked(user_id)
+            liked_ids = [str(x) for x in (liked_ids or [])]
+            return Response({"liked": liked_ids}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # POST /api/likes/<user_id>/<profile_id> -> like
+    def post(self, request, user_id, profile_id):
+        try:
+            ok = dbcommands.add_liked_profile(user_id, profile_id)
+            if not ok:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"ok": True}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # DELETE /api/likes/<user_id>/<profile_id> -> unlike
+    def delete(self, request, user_id, profile_id):
+        try:
+            ok = dbcommands.remove_liked_profile(user_id, profile_id)
+            if not ok:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"ok": True}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

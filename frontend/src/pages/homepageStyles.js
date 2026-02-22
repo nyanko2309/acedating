@@ -6,8 +6,7 @@ export const S = {
     
   page: {
     minHeight: "100vh",
-    background:
-      "linear-gradient(180deg, #0b1220 0%, #0b1220 230px, #f6f7fb 230px, #f6f7fb 100%)",
+    
     fontFamily:
       'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
     color: "#0f172a",

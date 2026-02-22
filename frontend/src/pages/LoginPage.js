@@ -27,8 +27,7 @@ async function uploadAvatarToCloudinary(file) {
   return data.secure_url; // save to Mongo as image_url
 }
 
-const API_BASE ="http://127.0.0.1:8000";
-//process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
+const API_BASE =process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 
 const BASE_URL_Login = `${API_BASE}/api/login`;
 const BASE_URL_SignUp = `${API_BASE}/api/signup`;

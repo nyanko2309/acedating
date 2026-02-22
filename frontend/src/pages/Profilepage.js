@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import TopBar from "./TopBar";
 
-const API_BASE = "http://127.0.0.1:8000";
+
+const API_BASE =process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 
 export default function ProfilePage() {
   const userId = useMemo(() => localStorage.getItem("user_id"), []);

@@ -66,16 +66,26 @@ function LoginPage() {
     const res = await axios.post(BASE_URL_Login, {
       username: loginUsername,
       password: loginPassword,
+    }, {
+      timeout: 15000, // ✅ prevent infinite waiting
     });
 
     if (res.data.user_id) localStorage.setItem("user_id", res.data.user_id);
     if (res.data.token) localStorage.setItem("token", res.data.token);
 
-    setLoadingPopup(false);
-    window.location.href = "/home";
+    // ✅ DON'T close popup here — let navigation replace the page
+    setLoadingText("Opening home…");
+    window.location.assign("/home");
+
+    // ✅ safety: if navigation doesn't happen (rare), close after 6s
+    setTimeout(() => setLoadingPopup(false), 6000);
+
   } catch (err) {
-    setLoadingPopup(false); // only close on error
-    const errorMsg = err?.response?.data?.error || err.message || "Login failed";
+    setLoadingPopup(false);
+    const errorMsg =
+      err?.code === "ECONNABORTED"
+        ? "Server is taking too long. Please try again."
+        : err?.response?.data?.error || err.message || "Login failed";
     alert(errorMsg);
   }
 };
@@ -86,12 +96,18 @@ function LoginPage() {
   try {
     let finalImageUrl = null;
 
-    // ✅ if file selected, upload to Cloudinary and use that URL
     if (signupAvatarFile) {
+      setLoadingText("Uploading your image…");
+      setLoadingPopup(true);
       setUploadingAvatar(true);
+
       finalImageUrl = await uploadAvatarToCloudinary(signupAvatarFile);
+
       setUploadingAvatar(false);
     }
+
+    setLoadingText("Creating your account…");
+    setLoadingPopup(true);
 
     const payload = {
       username: signupUsername,
@@ -107,25 +123,29 @@ function LoginPage() {
       contact: signupContact,
     };
 
-    await axios.post(BASE_URL_SignUp, payload);
+    await axios.post(BASE_URL_SignUp, payload, { timeout: 15000 });
 
-    // auto-login after signup
     setLoadingText("Logging you in…");
-    setLoadingPopup(true);
-    const loginRes = await axios.post(BASE_URL_Login, {
-      username: signupUsername,
-      password: signupPassword,
-    });
+    const loginRes = await axios.post(
+      BASE_URL_Login,
+      { username: signupUsername, password: signupPassword },
+      { timeout: 15000 }
+    );
 
     if (loginRes.data.user_id) localStorage.setItem("user_id", loginRes.data.user_id);
     if (loginRes.data.token) localStorage.setItem("token", loginRes.data.token);
-    setLoadingPopup(false);
 
-    window.location.href = "/home";
+    setLoadingText("Opening home…");
+    window.location.assign("/home");
+    setTimeout(() => setLoadingPopup(false), 6000);
+
   } catch (err) {
-    setLoadingPopup(false); // only close on error
+    setLoadingPopup(false);
     setUploadingAvatar(false);
-    const errorMsg = err?.response?.data?.error || err.message || "Sign up failed";
+    const errorMsg =
+      err?.code === "ECONNABORTED"
+        ? "Server is taking too long. Please try again."
+        : err?.response?.data?.error || err.message || "Sign up failed";
     alert(errorMsg);
   }
 };

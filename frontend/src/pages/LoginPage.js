@@ -33,6 +33,9 @@ const BASE_URL_Login = `${API_BASE}/api/login`;
 const BASE_URL_SignUp = `${API_BASE}/api/signup`;
 
 function LoginPage() {
+  //loadig
+  const [loadingPopup, setLoadingPopup] = useState(false);
+  const [loadingText, setLoadingText] = useState("Loading…");
   // LOGIN
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -54,23 +57,28 @@ function LoginPage() {
 
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post(BASE_URL_Login, {
-        username: loginUsername,
-        password: loginPassword,
-      });
+  e.preventDefault();
 
-      if (res.data.user_id) localStorage.setItem("user_id", res.data.user_id);
-      if (res.data.token) localStorage.setItem("token", res.data.token);
+  setLoadingText("Logging you in…");
+  setLoadingPopup(true);
 
-      //alert(res.data.message || "Logged in!");
-      window.location.href = "/home";
-    } catch (err) {
-      const errorMsg = err?.response?.data?.error || err.message || "Login failed";
-      alert(errorMsg);
-    }
-  };
+  try {
+    const res = await axios.post(BASE_URL_Login, {
+      username: loginUsername,
+      password: loginPassword,
+    });
+
+    if (res.data.user_id) localStorage.setItem("user_id", res.data.user_id);
+    if (res.data.token) localStorage.setItem("token", res.data.token);
+
+    
+    window.location.href = "/home";
+  } catch (err) {
+    setLoadingPopup(false); // only close on error
+    const errorMsg = err?.response?.data?.error || err.message || "Login failed";
+    alert(errorMsg);
+  }
+};
 
   const handleSignup = async (e) => {
   e.preventDefault();
@@ -102,6 +110,8 @@ function LoginPage() {
     await axios.post(BASE_URL_SignUp, payload);
 
     // auto-login after signup
+    setLoadingText("Logging you in…");
+    setLoadingPopup(true);
     const loginRes = await axios.post(BASE_URL_Login, {
       username: signupUsername,
       password: signupPassword,
@@ -112,6 +122,7 @@ function LoginPage() {
 
     window.location.href = "/home";
   } catch (err) {
+    setLoadingPopup(false); // only close on error
     setUploadingAvatar(false);
     const errorMsg = err?.response?.data?.error || err.message || "Sign up failed";
     alert(errorMsg);
@@ -393,6 +404,42 @@ textarea.flip-card__input {
   box-shadow: 0px 0px var(--main-color);
   transform: translate(3px, 3px);
 }
+  .loading-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+
+.loading-box{
+  background: rgba(255,255,255,0.92);
+  border: 2px solid var(--main-color);
+  box-shadow: 4px 4px var(--main-color);
+  border-radius: 12px;
+  padding: 18px 18px;
+  width: min(320px, 90vw);
+  text-align: center;
+  font-weight: 800;
+  color: #222;
+}
+
+.spinner{
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(0,0,0,0.2);
+  border-top-color: rgba(0,0,0,0.8);
+  border-radius: 50%;
+  margin: 0 auto 10px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin{
+  to { transform: rotate(360deg); }
+}
 
 .helper {
   width: min(320px, 100%);
@@ -404,6 +451,16 @@ textarea.flip-card__input {
   margin-top: -6px;
 }
 `}</style>
+
+{loadingPopup && (
+  <div className="loading-overlay">
+    <div className="loading-box">
+      <div className="spinner" />
+      {loadingText}
+    </div>
+  </div>
+)}
+
 <div className="page-header">
   <h1 className="page-title">♠SPADES♠</h1>
 

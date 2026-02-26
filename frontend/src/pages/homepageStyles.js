@@ -3,14 +3,18 @@ export const PLACEHOLDER_AVATAR_URL =
   "https://api.dicebear.com/7.x/thumbs/svg?seed=ace";
 
 export const S = {
-    
   page: {
     minHeight: "100vh",
-    
     fontFamily:
       'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
-    color: "#0f172a",
+    color: "rgba(255,255,255,0.92)",
+    background:
+      "radial-gradient(1200px 800px at 20% 10%, rgba(255,110,199,0.28), transparent 60%)," +
+      "radial-gradient(900px 700px at 85% 20%, rgba(193, 117, 186, 0.22), transparent 55%)," +
+      "radial-gradient(1000px 800px at 40% 95%, rgba(167,139,250,0.22), transparent 55%)," +
+      "linear-gradient(120deg, #514c53, #1c151e 60%, #3d0153)",
   },
+
   topBar: {
     maxWidth: 1100,
     margin: "0 auto",
@@ -31,8 +35,9 @@ export const S = {
     border: "1px solid rgba(255,255,255,0.18)",
     fontSize: 20,
   },
-  brandTitle: { fontWeight: 800, letterSpacing: 0.2, fontSize: 16, lineHeight: 1.1 },
+  brandTitle: { fontWeight: 900, letterSpacing: 0.3, fontSize: 16, lineHeight: 1.1 },
   brandSub: { opacity: 0.8, fontSize: 12, marginTop: 3 },
+
   statsPill: {
     display: "flex",
     alignItems: "center",
@@ -43,6 +48,7 @@ export const S = {
     border: "1px solid rgba(255,255,255,0.18)",
     color: "white",
     whiteSpace: "nowrap",
+    backdropFilter: "blur(10px)",
   },
   dot: { width: 8, height: 8, borderRadius: 999, background: "#22c55e" },
   statsText: { fontSize: 12, opacity: 0.92 },
@@ -50,12 +56,16 @@ export const S = {
   shell: { maxWidth: 1100, margin: "0 auto", padding: "0 18px 40px" },
 
   filtersCard: {
-    background: "white",
+    background: "rgba(91, 69, 103, 0.47)",
     borderRadius: 18,
-    padding: 16,
-    boxShadow: "0 12px 40px rgba(15,23,42,0.10)",
-    border: "1px solid rgba(15,23,42,0.06)",
+    padding: 18,
+    boxShadow: "0 18px 60px rgba(0,0,0,0.18)",
+    border: "1px solid rgba(255,255,255,0.14)",
     marginTop: 8,
+    position: "relative",
+    overflow: "visible",
+    zIndex: 1000,
+    //backdropFilter: "blur(10px)",
   },
   filtersHeader: {
     display: "flex",
@@ -64,12 +74,12 @@ export const S = {
     gap: 12,
     marginBottom: 14,
   },
-  filtersTitle: { fontSize: 16, fontWeight: 800 },
-  filtersHint: { fontSize: 12, color: "#475569", marginTop: 4 },
+  filtersTitle: { fontSize: 16, fontWeight: 900, color: "rgba(255,255,255,0.92)" },
+  filtersHint: { fontSize: 12, color: "rgba(255,255,255,0.70)", marginTop: 4 },
 
   filtersGrid: {
     display: "grid",
-    gridTemplateColumns: "1.2fr 1fr 1fr",
+    gridTemplateColumns: "1.4fr 1fr 1fr",
     gap: 12,
   },
 
@@ -79,88 +89,101 @@ export const S = {
     flex: 1,
     padding: "12px 12px",
     borderRadius: 12,
-    border: "1px solid rgba(15,23,42,0.12)",
+    border: "1px solid rgba(255,255,255,0.16)",
     outline: "none",
     fontSize: 14,
-    background: "#fbfcff",
+    background: "rgba(255,255,255,0.06)",
+    color: "rgba(255,255,255,0.92)",
   },
 
   primaryBtn: {
     padding: "12px 14px",
     borderRadius: 12,
-    border: "1px solid rgba(15,23,42,0.10)",
-    background: "#0b1220",
+    border: "1px solid rgba(255,255,255,0.18)",
+    background:
+      "linear-gradient(135deg, rgba(255,110,199,0.28), rgba(167,139,250,0.22), rgba(125,211,252,0.18))",
     color: "white",
     cursor: "pointer",
-    fontWeight: 700,
+    fontWeight: 900,
     fontSize: 14,
+    backdropFilter: "blur(10px)",
   },
   secondaryBtn: {
     padding: "10px 12px",
     borderRadius: 12,
-    border: "1px solid rgba(15,23,42,0.12)",
-    background: "white",
+    border: "1px solid rgba(255,255,255,0.16)",
+    background: "rgba(255,255,255,0.05)",
     cursor: "pointer",
-    fontWeight: 700,
+    fontWeight: 900,
     fontSize: 13,
-    color: "#0f172a",
+    color: "rgba(255,255,255,0.88)",
+    backdropFilter: "blur(10px)",
   },
   linkBtn: {
     padding: 0,
     border: "none",
     background: "transparent",
     cursor: "pointer",
-    fontWeight: 700,
+    fontWeight: 800,
     fontSize: 12,
-    color: "#0b1220",
+    color: "rgba(255,255,255,0.92)",
     textDecoration: "underline",
+    textUnderlineOffset: 2,
   },
 
-  msWrap: { position: "relative", minWidth: 220 },
-  msLabel: { fontSize: 12, fontWeight: 800, color: "#334155", marginBottom: 6 },
+msWrap: {
+  position: "relative",
+  zIndex: 2000,
+},
+  msLabel: { fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.80)", marginBottom: 6 },
   msButton: {
     width: "100%",
     padding: "12px 12px",
     borderRadius: 12,
-    border: "1px solid rgba(15,23,42,0.12)",
-    background: "#fbfcff",
+    border: "1px solid rgba(255,255,255,0.16)",
+    background: "rgba(255, 255, 255, 0.06)",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
     textAlign: "left",
+    color: "rgba(255,255,255,0.92)",
+    backdropFilter: "blur(10px)",
   },
   msButtonLeft: { display: "flex", alignItems: "center", gap: 8, minWidth: 0 },
   msButtonTitle: {
     fontSize: 14,
-    color: "#0f172a",
+    color: "rgba(255,255,255,0.92)",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
-  chev: { opacity: 0.7, transition: "transform .15s ease" },
+  chev: { opacity: 0.8, transition: "transform .15s ease" },
   msPanel: {
-    position: "absolute",
-    top: "calc(100% + 8px)",
-    left: 0,
-    right: 0,
-    zIndex: 20,
-    background: "white",
-    borderRadius: 14,
-    border: "1px solid rgba(15,23,42,0.12)",
-    boxShadow: "0 20px 60px rgba(15,23,42,0.14)",
-    overflow: "hidden",
+  position: "absolute",
+  top: "calc(100% + 8px)",
+  left: 0,
+  right: 0,
+  zIndex: 99999,
+  background: "rgba(56, 42, 64, 0.92)",
+  borderRadius: 14,
+  border: "1px solid rgba(255,255,255,0.14)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+  overflow: "visible",
   },
+
   msPanelTop: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     padding: "10px 12px",
-    background: "#f8fafc",
-    borderBottom: "1px solid rgba(15,23,42,0.06)",
+    zIndex: 99999,
+
+    background: "rgba(255,255,255,0.06)",
+    borderBottom: "1px solid rgba(255,255,255,0.10)",
   },
-  msPanelHint: { fontSize: 12, color: "#475569" },
+  msPanelHint: { fontSize: 12, color: "rgba(255,255,255,0.72)" },
   msList: { maxHeight: 220, overflow: "auto", padding: 8 },
   msRow: {
     display: "flex",
@@ -169,14 +192,15 @@ export const S = {
     padding: "8px 8px",
     borderRadius: 10,
     cursor: "pointer",
+    color: "rgba(255,255,255,0.90)",
   },
   msCheck: { width: 16, height: 16 },
-  msRowText: { fontSize: 13, color: "#0f172a" },
+  msRowText: { fontSize: 13, color: "rgba(255,255,255,0.90)" },
 
   chips: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 },
   chip: {
-    border: "1px solid rgba(15,23,42,0.10)",
-    background: "white",
+    border: "1px solid rgba(255,255,255,0.16)",
+    background: "rgba(255,255,255,0.08)",
     borderRadius: 999,
     padding: "6px 10px",
     cursor: "pointer",
@@ -184,9 +208,10 @@ export const S = {
     display: "flex",
     alignItems: "center",
     gap: 8,
-    color: "#0f172a",
+    color: "rgba(255,255,255,0.88)",
+    //backdropFilter: "blur(10px)",
   },
-  chipX: { opacity: 0.6, fontWeight: 900 },
+  chipX: { opacity: 0.7, fontWeight: 900 },
 
   ageWrap: { minWidth: 220 },
   ageRow: { display: "flex", alignItems: "center", gap: 8 },
@@ -194,73 +219,81 @@ export const S = {
     width: "100%",
     padding: "12px 12px",
     borderRadius: 12,
-    border: "1px solid rgba(15,23,42,0.12)",
+    border: "1px solid rgba(255,255,255,0.16)",
     outline: "none",
     fontSize: 14,
-    background: "#fbfcff",
+    background: "rgba(255,255,255,0.06)",
+    color: "rgba(255,255,255,0.92)",
   },
-  ageDash: { color: "#64748b", fontWeight: 800 },
-  ageHint: { fontSize: 12, color: "#64748b", marginTop: 6 },
+  ageDash: { color: "rgba(255,255,255,0.65)", fontWeight: 900 },
+  ageHint: { fontSize: 12, color: "rgba(255,255,255,0.70)", marginTop: 6 },
 
   resultsHeader: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
     marginTop: 18,
-    marginBottom: 10,
+    marginBottom: 12,
     padding: "0 2px",
   },
-  resultsTitle: { fontSize: 16, fontWeight: 900, color: "#0f172a" },
-  resultsMeta: { fontSize: 12, color: "#64748b" },
+  resultsTitle: { fontSize: 16, fontWeight: 900, color: "rgba(255,255,255,0.92)" },
+  resultsMeta: { fontSize: 12, color: "rgba(255,255,255,0.70)" },
 
   loadingBox: {
-    background: "white",
+    background: "rgba(255,255,255,0.08)",
     borderRadius: 18,
     padding: 18,
     display: "flex",
     alignItems: "center",
     gap: 12,
-    border: "1px solid rgba(15,23,42,0.06)",
-    boxShadow: "0 12px 40px rgba(15,23,42,0.08)",
+    border: "1px solid rgba(255,255,255,0.16)",
+    boxShadow: "0 12px 40px rgba(0,0,0,0.25)",
+    backdropFilter: "blur(10px)",
   },
   spinner: {
     width: 18,
     height: 18,
     borderRadius: 999,
-    border: "2px solid rgba(15,23,42,0.18)",
-    borderTopColor: "rgba(15,23,42,0.75)",
+    border: "2px solid rgba(255,255,255,0.22)",
+    borderTopColor: "rgba(255,255,255,0.82)",
     animation: "spin 0.9s linear infinite",
   },
 
   empty: {
-    background: "white",
+    background: "rgba(255,255,255,0.08)",
     borderRadius: 18,
     padding: 22,
-    border: "1px solid rgba(15,23,42,0.06)",
-    boxShadow: "0 12px 40px rgba(15,23,42,0.08)",
+    border: "1px solid rgba(255,255,255,0.16)",
+    boxShadow: "0 12px 40px rgba(0,0,0,0.25)",
     display: "grid",
     gap: 10,
+    //backdropFilter: "blur(10px)",
   },
-  emptyTitle: { fontSize: 16, fontWeight: 900 },
-  emptyText: { fontSize: 13, color: "#475569" },
+  emptyTitle: { fontSize: 16, fontWeight: 900, color: "rgba(255,255,255,0.92)" },
+  emptyText: { fontSize: 13, color: "rgba(255,255,255,0.70)" },
 
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: 14,
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 16,
   },
+
+  // Add className="__hp_card__" on each card wrapper to get glow+hover
   card: {
-    background: "white",
-    borderRadius: 18,
-    border: "1px solid rgba(15,23,42,0.06)",
-    boxShadow: "0 12px 40px rgba(15,23,42,0.08)",
+    background: "rgba(122, 91, 119, 0.37)",
+    borderRadius: 20,
+    border: "1px solid rgba(255,255,255,0.16)",
+    boxShadow: "0 18px 60px rgba(0,0,0,0.28)",
     overflow: "hidden",
-    transition: "transform .15s ease",
+    transition: "transform .18s ease, box-shadow .18s ease",
     display: "flex",
     flexDirection: "column",
-    minHeight: 220,
+    minHeight: 240,
+    zIndex: 0,
+    //backdropFilter: "blur(10px)",
   },
-    // lightbox
+
+  // Lightbox
   overlay: {
     position: "fixed",
     inset: 0,
@@ -273,18 +306,19 @@ export const S = {
   modal: {
     width: "min(960px, 96vw)",
     maxHeight: "90vh",
-    background: "white",
+    background: "rgba(255,255,255,0.92)",
     borderRadius: 18,
     overflow: "hidden",
     boxShadow: "0 30px 120px rgba(0,0,0,0.35)",
-    border: "1px solid rgba(255,255,255,0.12)",
+    border: "1px solid rgba(255,255,255,0.14)",
+   // backdropFilter: "blur(10px)",
   },
   modalTop: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     padding: "12px 14px",
-    background: "#0b1220",
+    background: "rgba(12, 8, 20, 0.92)",
     color: "white",
   },
   modalTitle: { fontWeight: 900, fontSize: 13, opacity: 0.95 },
@@ -299,7 +333,7 @@ export const S = {
     fontSize: 18,
     lineHeight: "36px",
   },
-  modalBody: { background: "#0b1220" },
+  modalBody: { background: "rgba(12, 8, 20, 0.92)" },
   modalImgWrap: {
     width: "100%",
     height: "min(72vh, 720px)",
@@ -320,54 +354,58 @@ export const S = {
     padding: 14,
     gap: 12,
   },
+
   avatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
-    background: "#f1f5f9",
-    border: "1px solid rgba(15,23,42,0.06)",
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    background: "rgba(255,255,255,0.10)",
+    border: "1px solid rgba(255,255,255,0.22)",
     overflow: "hidden",
     display: "grid",
     placeItems: "center",
     flex: "0 0 auto",
   },
   avatarImg: { width: "100%", height: "100%", objectFit: "cover" },
-  avatarFallback: { fontWeight: 900, color: "#0f172a", fontSize: 18 },
+  avatarFallback: { fontWeight: 900, color: "rgba(255,255,255,0.92)", fontSize: 18 },
 
   favBtn: {
-    border: "1px solid rgba(15,23,42,0.10)",
-    background: "white",
+    border: "1px solid rgba(255,255,255,0.18)",
+    background: "rgba(255,255,255,0.08)",
+    color: "rgba(255,255,255,0.92)",
     borderRadius: 12,
     width: 40,
     height: 40,
     cursor: "pointer",
     fontSize: 18,
     lineHeight: "40px",
+    backdropFilter: "blur(10px)",
   },
   favBtnActive: {
-    background: "#fff7ed",
-    border: "1px solid rgba(249,115,22,0.35)",
-    color: "#f97316",
+    background: "rgba(255,110,199,0.16)",
+    border: "1px solid rgba(255,110,199,0.40)",
+    color: "rgba(255,255,255,0.95)",
   },
 
   cardBody: { padding: "0 14px 14px", display: "grid", gap: 10 },
+
   nameRow: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
     gap: 10,
   },
-  name: { fontWeight: 900, fontSize: 15, color: "#0f172a" },
-  user: { fontSize: 12, color: "#64748b" },
+  name: { fontWeight: 900, fontSize: 16, color: "rgba(255,255,255,0.92)" },
+  user: { fontSize: 12, color: "rgba(255,255,255,0.65)" },
 
   badges: { display: "flex", flexWrap: "wrap", gap: 6 },
   badge: {
     fontSize: 12,
     padding: "6px 10px",
     borderRadius: 999,
-    background: "#f8fafc",
-    border: "1px solid rgba(15,23,42,0.06)",
-    color: "#0f172a",
+    background: "rgba(255,255,255,0.10)",
+    border: "1px solid rgba(255,255,255,0.16)",
+    color: "rgba(255,255,255,0.88)",
   },
 
   detailRow: {
@@ -376,17 +414,22 @@ export const S = {
     justifyContent: "space-between",
     gap: 10,
   },
-  detailKey: { fontSize: 12, color: "#64748b", fontWeight: 800 },
-  detailVal: { fontSize: 12, color: "#0f172a" },
+  detailKey: { fontSize: 12, color: "rgba(255,255,255,0.60)", fontWeight: 900 },
+  detailVal: { fontSize: 12, color: "rgba(255,255,255,0.86)" },
 
   block: {
     padding: 10,
     borderRadius: 14,
-    background: "#fbfcff",
-    border: "1px solid rgba(15,23,42,0.06)",
+    background: "rgba(255,255,255,0.08)",
+    border: "1px solid rgba(255,255,255,0.14)",
   },
-  blockTitle: { fontSize: 12, fontWeight: 900, color: "#334155", marginBottom: 4 },
-  blockText: { fontSize: 13, color: "#0f172a", whiteSpace: "pre-wrap", wordBreak: "break-word" },
+  blockTitle: { fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.78)", marginBottom: 4 },
+  blockText: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.86)",
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+  },
 };
 
 export function ensureHomepageStyles() {
@@ -397,11 +440,42 @@ export function ensureHomepageStyles() {
   style.id = "hp-inline-style";
   style.textContent = `
     @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
-    @media (max-width: 1050px) {
-      .__hp_grid__ { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
+
+    /* 1 column on phone */
     @media (max-width: 720px) {
-      .__hp_grid__ { grid-template-columns: 1fr; }
+      .__hp_grid__ { grid-template-columns: 1fr !important; }
+    }
+
+    /* Card glow + hover (add className="__hp_card__" on card wrapper) */
+    .__hp_card__{
+      position: relative;
+    }
+    .__hp_card__::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      border-radius: 20px;
+      padding:1px;
+      background: linear-gradient(135deg,
+        rgba(255,110,199,0.55),
+        rgba(125,211,252,0.45),
+        rgba(167,139,250,0.50)
+      );
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0.65;
+    }
+    .__hp_card__:hover{
+      transform: translateY(-4px);
+      box-shadow: 0 26px 90px rgba(0,0,0,0.36);
+    }
+
+    /* Nicer focus ring */
+    input:focus, button:focus, select:focus, textarea:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(255,110,199,0.22);
     }
   `;
   document.head.appendChild(style);

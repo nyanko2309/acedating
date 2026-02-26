@@ -27,78 +27,123 @@ export default function TopBar({
     <>
       <style>{`
         .sp-topbar {
-          padding: 12px 16px;
-            width: 100%;
+          width: 100%;
+          padding: 14px 16px;
+          position: sticky;
+          top: 0;
+          z-index: 1000;
+          backdrop-filter: blur(10px);
+          background:
+            linear-gradient(90deg, rgba(18,2,24,0.68), rgba(11,16,38,0.58));
+          border-bottom: 1px solid rgba(255,255,255,0.10);
         }
 
         .sp-topbar__inner {
+          max-width: 1100px;
+          margin: 0 auto;
           display: flex;
           align-items: center;
-          gap: 16px;
           justify-content: space-between;
+          gap: 14px;
         }
 
         .sp-brand {
           display: inline-flex;
           align-items: center;
           gap: 10px;
-          border: 0;
-          background: transparent;
+          border: 1px solid rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.06);
           cursor: pointer;
-          padding: 8px 10px;
-          border-radius: 10px;
+          padding: 10px 12px;
+          border-radius: 14px;
+          color: rgba(255,255,255,0.92);
+          box-shadow: 0 12px 40px rgba(0,0,0,0.22);
+          transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+          white-space: nowrap;
+        }
+
+        .sp-brand:hover {
+          transform: translateY(-1px);
+          border-color: rgba(255,255,255,0.20);
+          box-shadow: 0 18px 60px rgba(0,0,0,0.30);
         }
 
         .sp-brand__icon { font-size: 20px; }
-        .sp-brand__text { font-size: 18px; font-weight: 700; }
+        .sp-brand__text { font-size: 16px; font-weight: 900; letter-spacing: 0.4px; }
 
         .sp-navbar-buttons {
           display: flex;
           align-items: center;
-          gap: 30px;
-          padding: 10px 12px;
-          background: #4c244f;
-          border-radius: 12px;
+          gap: 10px;
+          padding: 8px;
+          border-radius: 16px;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.12);
+          box-shadow: 0 12px 40px rgba(0,0,0,0.22);
           flex-wrap: wrap;
-          width: 100%;
-          margin-left: auto;
         }
 
         .sp-navbtn {
           appearance: none;
-          border: 2px solid transparent;
-          border-radius: 10px;
+          border: 1px solid rgba(255,255,255,0.14);
+          border-radius: 14px;
           padding: 10px 14px;
-          min-height: 42px;
+          min-height: 40px;
           line-height: 1;
-          font-size: 16px;
+          font-size: 14px;
+          font-weight: 800;
 
           display: inline-flex;
           align-items: center;
           justify-content: center;
 
-          background: #111;
-          color: #fff;
+          background: rgba(255,255,255,0.06);
+          color: rgba(255,255,255,0.92);
           text-decoration: none;
           white-space: nowrap;
 
           cursor: pointer;
-          transition: filter .2s ease, background-color .2s ease, border-color .2s ease;
+          transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background-color .16s ease;
         }
 
-        a.sp-navbtn:visited { color: #fff; }
+        a.sp-navbtn:visited { color: rgba(255,255,255,0.92); }
 
         .sp-navbtn:hover {
-          background: #444;
-          filter: brightness(0.9);
+          transform: translateY(-1px);
+          border-color: rgba(255,255,255,0.22);
+          background: rgba(255,255,255,0.10);
+          box-shadow: 0 14px 45px rgba(0,0,0,0.26);
         }
 
         .sp-navbtn.is-active {
-          border-color: #fff;
+          border-color: rgba(255,110,199,0.60);
+          box-shadow: 0 0 0 3px rgba(255,110,199,0.18);
+          background:
+            linear-gradient(135deg, rgba(255,110,199,0.22), rgba(167,139,250,0.18), rgba(125,211,252,0.14));
         }
 
         .sp-navbtn--danger {
-          color: #ff4d4d;
+          border-color: rgba(255,80,80,0.28);
+          color: rgba(255,160,160,0.95);
+        }
+
+        .sp-navbtn--danger:hover {
+          border-color: rgba(255,80,80,0.42);
+          background: rgba(255,80,80,0.12);
+          box-shadow: 0 14px 45px rgba(255,80,80,0.12);
+        }
+
+        /* Mobile: keep it clean */
+        @media (max-width: 720px) {
+          .sp-topbar__inner { flex-direction: column; align-items: stretch; }
+          .sp-brand { width: 100%; justify-content: center; }
+          .sp-navbar-buttons { justify-content: center; }
+        }
+
+        /* Nice focus ring */
+        .sp-brand:focus, .sp-navbtn:focus {
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(255,110,199,0.22);
         }
       `}</style>
 
@@ -122,7 +167,11 @@ export default function TopBar({
             ))}
 
             {showLogout && (
-              <button className="sp-navbtn sp-navbtn--danger" type="button" onClick={logout}>
+              <button
+                className="sp-navbtn sp-navbtn--danger"
+                type="button"
+                onClick={logout}
+              >
                 Logout
               </button>
             )}

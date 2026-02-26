@@ -71,7 +71,7 @@ function LoginPage() {
     if (res.data.user_id) localStorage.setItem("user_id", res.data.user_id);
     if (res.data.token) localStorage.setItem("token", res.data.token);
 
-    
+    setLoadingPopup(false);
     window.location.href = "/home";
   } catch (err) {
     setLoadingPopup(false); // only close on error
@@ -119,6 +119,7 @@ function LoginPage() {
 
     if (loginRes.data.user_id) localStorage.setItem("user_id", loginRes.data.user_id);
     if (loginRes.data.token) localStorage.setItem("token", loginRes.data.token);
+    setLoadingPopup(false);
 
     window.location.href = "/home";
   } catch (err) {

@@ -335,12 +335,13 @@ function TextField({ label, value, setValue, edit, maxLength }) {
 const S = {
   page: {
     minHeight: "100vh",
-    color: "rgba(255,255,255,0.92)",
-    background:
-      "radial-gradient(1200px 800px at 20% 10%, rgba(255, 46, 248, 0.28), transparent 60%)," +
-      "radial-gradient(900px 700px at 85% 20%, rgba(121, 49, 255, 0.22), transparent 55%)," +
-      "radial-gradient(1000px 800px at 40% 95%, rgba(206, 139, 250, 0.22), transparent 55%)," +
-      "linear-gradient(120deg, #edc2ff, #693782 60%, #100a12)",
+    color: "rgba(15, 15, 15, 0.92)",
+   background:
+    
+    'url("/bgdesign.png")',
+     backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      backgroundSize: "cover",
   },
 
   main: { padding: 16, display: "flex", justifyContent: "center" },
@@ -363,7 +364,7 @@ const S = {
     flexWrap: "wrap",
   },
 
-  title: { fontSize: 22, fontWeight: 950, color: "rgba(255,255,255,0.92)" },
+  title: { fontSize: 22, fontWeight: 950, color: "rgba(40, 2, 66, 0.92)" },
   sub: { fontSize: 13, color: "rgba(255,255,255,0.70)", marginTop: 4 },
 
   error: {
@@ -377,7 +378,7 @@ const S = {
     fontSize: 13,
   },
 
-  loading: { padding: 18, fontWeight: 900, color: "rgba(255,255,255,0.90)" },
+  loading: { padding: 18, fontWeight: 900, color: "rgba(40, 2, 66, 0.92)" },
 
   grid: {
     marginTop: 16,
@@ -404,7 +405,7 @@ const S = {
 
   field: { display: "flex", flexDirection: "column", gap: 6 },
 
-  label: { fontSize: 12, fontWeight: 950, color: "rgba(255,255,255,0.78)" },
+  label: { fontSize: 12, fontWeight: 950, color: "rgba(40, 2, 66, 0.92)" },
 
   value: {
     background: "rgba(255,255,255,0.06)",
@@ -412,7 +413,7 @@ const S = {
     borderRadius: 14,
     padding: "10px 12px",
     fontWeight: 800,
-    color: "rgba(255,255,255,0.92)",
+    color: "rgba(40, 2, 66, 0.92)",
   },
 
   valueMultiline: {
@@ -421,7 +422,7 @@ const S = {
     borderRadius: 14,
     padding: "10px 12px",
     fontWeight: 700,
-    color: "rgba(255,255,255,0.90)",
+    color: "rgba(40, 2, 66, 0.92)",
     whiteSpace: "pre-wrap",
     minHeight: 110,
   },
@@ -433,7 +434,7 @@ const S = {
     borderRadius: 14,
     padding: "10px 12px",
     fontWeight: 800,
-    color: "rgba(255,255,255,0.92)",
+    color: "rgba(40, 2, 66, 0.92)",
     outline: "none",
     boxSizing: "border-box",
   },
@@ -445,14 +446,14 @@ const S = {
     borderRadius: 14,
     padding: "10px 12px",
     fontWeight: 800,
-    color: "rgba(255,255,255,0.92)",
+    color: "rgba(40, 2, 66, 0.92)",
     outline: "none",
     resize: "vertical",
     boxSizing: "border-box",
     minHeight: 120,
   },
 
-  hint: { fontSize: 12, color: "rgba(255,255,255,0.65)", marginTop: 4 },
+  hint: { fontSize: 12, color: "rgba(71, 47, 89, 0.65)", marginTop: 4 },
 
   btn: {
     height: 40,
@@ -461,7 +462,7 @@ const S = {
     border: "1px solid rgba(255,255,255,0.18)",
     background:
       "linear-gradient(135deg, rgba(255,110,199,0.26), rgba(167,139,250,0.20), rgba(125,211,252,0.16))",
-    color: "rgba(255,255,255,0.92)",
+    color: "rgba(40, 2, 66, 0.92)",
     fontWeight: 950,
     cursor: "pointer",
     backdropFilter: "blur(10px)",
@@ -473,7 +474,7 @@ const S = {
     borderRadius: 999,
     border: "1px solid rgba(255,255,255,0.18)",
     background: "rgba(255,255,255,0.06)",
-    color: "rgba(255,255,255,0.90)",
+    color: "rgba(40, 2, 66, 0.92)",
     fontWeight: 950,
     cursor: "pointer",
     backdropFilter: "blur(10px)",

@@ -5,15 +5,16 @@ export const PLACEHOLDER_AVATAR_URL =
 export const S = {
   page: {
     minHeight: "100vh",
+
     fontFamily:
       'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
     color: "rgba(255,255,255,0.92)",
     background:
-      "radial-gradient(1200px 800px at 20% 10%, rgba(255, 46, 248, 0.28), transparent 60%)," +
-      "radial-gradient(900px 700px at 85% 20%, rgba(121, 49, 255, 0.22), transparent 55%)," +
-      "radial-gradient(1000px 800px at 40% 95%, rgba(206, 139, 250, 0.22), transparent 55%)," +
-            "linear-gradient(120deg, #edc2ff, #693782 60%, #1d1620)",
-
+    
+    'url("/bgdesign.png")',
+     backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      backgroundSize: "cover",
   },
 
   topBar: {
@@ -57,7 +58,7 @@ export const S = {
   shell: { maxWidth: 1100, margin: "0 auto", padding: "0 18px 40px" },
 
   filtersCard: {
-    background: "rgba(91, 69, 103, 0.47)",
+    background: "rgba(34, 22, 42, 0.79)",
     borderRadius: 18,
     padding: 18,
     boxShadow: "0 18px 60px rgba(0,0,0,0.18)",
@@ -281,7 +282,7 @@ msWrap: {
 
   // Add className="__hp_card__" on each card wrapper to get glow+hover
   card: {
-    background: "rgba(122, 91, 119, 0.37)",
+    background: "rgba(40, 24, 47, 0.77)",
     borderRadius: 20,
     border: "1px solid rgba(255,255,255,0.16)",
     boxShadow: "0 18px 60px rgba(0,0,0,0.28)",

@@ -195,11 +195,13 @@ export default function ProfilePage() {
   return (
     <div style={S.page}>
        <TopBar
-       links={[
-         { to: "/home", label: "Home" },
-         { to: "/profile", label: "My Profile" },
-         { to: "/saved", label: "Saved" },
-       ]}
+         links={[
+    { to: "/home", label: "Home" },
+    { to: "/profile", label: "My Profile" },
+    { to: "/saved", label: "Saved" },
+    { to: "/random", label: "Let luck choose" },
+    { to: "/latters", label: "Inbox" },
+  ]}
        />
 
       <main style={S.main}>
@@ -344,10 +346,10 @@ const S = {
     minHeight: "100vh",
     color: "rgba(255,255,255,0.92)",
     background:
-      "radial-gradient(1200px 800px at 20% 10%, rgba(255,110,199,0.28), transparent 60%)," +
-      "radial-gradient(900px 700px at 85% 20%, rgba(193, 117, 186, 0.22), transparent 55%)," +
-      "radial-gradient(1000px 800px at 40% 95%, rgba(167,139,250,0.22), transparent 55%)," +
-      "linear-gradient(120deg, #514c53, #1c151e 60%, #3d0153)",
+      "radial-gradient(1200px 800px at 20% 10%, rgba(255, 46, 248, 0.28), transparent 60%)," +
+      "radial-gradient(900px 700px at 85% 20%, rgba(121, 49, 255, 0.22), transparent 55%)," +
+      "radial-gradient(1000px 800px at 40% 95%, rgba(206, 139, 250, 0.22), transparent 55%)," +
+      "linear-gradient(120deg, #edc2ff, #693782 60%, #100a12)",
   
   },
 

@@ -49,7 +49,7 @@ function LoginPage() {
   const [signupLookingFor, setSignupLookingFor] = useState("");
   const [signupAvatarFile, setSignupAvatarFile] = useState(null); // ✅ file upload
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
+  const [signupAvatarPreview, setSignupAvatarPreview] = useState(null);
   const [signupCity, setSignupCity] = useState("");
   const [signupGender, setSignupGender] = useState("");
   const [signupInfo, setSignupInfo] = useState("");
@@ -603,13 +603,69 @@ textarea.flip-card__input {
                     <option value="polyamory-romance">polyamory romance</option>
                   </select>
 
-                  {/* ✅ File upload (Cloudinary) */}
-                  <input
-                    className="flip-card__input"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setSignupAvatarFile(e.target.files?.[0] || null)}
-                  />
+                  <div className="helper" style={{ marginTop: 2, fontWeight: 800 }}>
+  Profile image
+</div>
+
+<div
+  style={{
+    width: "min(320px, 100%)",
+    display: "flex",
+    gap: 10,
+    alignItems: "center",
+    justifyContent: "space-between",
+  }}
+>
+  <div
+    style={{
+      width: 54,
+      height: 54,
+      borderRadius: 14,
+      overflow: "hidden",
+      border: "2px solid var(--main-color)",
+      background: "#f1f5f9",
+      boxShadow: "4px 4px var(--main-color)",
+      flex: "0 0 auto",
+      display: "grid",
+      placeItems: "center",
+      fontWeight: 900,
+    }}
+  >
+    {signupAvatarPreview ? (
+  <img
+    src={signupAvatarPreview}
+    alt="preview"
+    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+  />
+) : (
+  <span style={{ fontSize: 11, fontWeight: 800, opacity: 0.8, lineHeight: 1.1 }}>
+    add profile image
+  </span>
+)}
+  </div>
+
+  <input
+    className="flip-card__input"
+    style={{ margin: 0 }}
+    type="file"
+    accept="image/*"
+    onChange={(e) => {
+      const f = e.target.files?.[0] || null;
+      setSignupAvatarFile(f);
+      if (f) {
+        const url = URL.createObjectURL(f);
+        setSignupAvatarPreview(url);
+      } else {
+        setSignupAvatarPreview(null);
+      }
+    }}
+  />
+</div>
+
+<div className="helper">
+  {signupAvatarFile ? `Selected: ${signupAvatarFile.name}` : "Optional: choose an image to upload"}
+  {uploadingAvatar ? " • Uploading…" : ""}
+</div>
                   <div className="helper">
                     {signupAvatarFile ? `Selected: ${signupAvatarFile.name}` : "Optional: choose an image to upload"}
                     {uploadingAvatar ? " • Uploading…" : ""}
@@ -644,8 +700,8 @@ textarea.flip-card__input {
                     required
                   >
                     <option value="">Gender</option>
-                    <option value="male">male</option>
-                    <option value="female">female</option>
+                    <option value="man">man</option>
+                    <option value="woman">woman</option>
                     <option value="non-binary">non binary</option>
                     <option value="other">other</option>
                   </select>

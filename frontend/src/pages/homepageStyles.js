@@ -9,10 +9,11 @@ export const S = {
       'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
     color: "rgba(255,255,255,0.92)",
     background:
-      "radial-gradient(1200px 800px at 20% 10%, rgba(255,110,199,0.28), transparent 60%)," +
-      "radial-gradient(900px 700px at 85% 20%, rgba(193, 117, 186, 0.22), transparent 55%)," +
-      "radial-gradient(1000px 800px at 40% 95%, rgba(167,139,250,0.22), transparent 55%)," +
-      "linear-gradient(120deg, #514c53, #1c151e 60%, #3d0153)",
+      "radial-gradient(1200px 800px at 20% 10%, rgba(255, 46, 248, 0.28), transparent 60%)," +
+      "radial-gradient(900px 700px at 85% 20%, rgba(121, 49, 255, 0.22), transparent 55%)," +
+      "radial-gradient(1000px 800px at 40% 95%, rgba(206, 139, 250, 0.22), transparent 55%)," +
+            "linear-gradient(120deg, #edc2ff, #693782 60%, #1d1620)",
+
   },
 
   topBar: {
@@ -422,6 +423,8 @@ msWrap: {
     borderRadius: 14,
     background: "rgba(255,255,255,0.08)",
     border: "1px solid rgba(255,255,255,0.14)",
+    maxHeight:240,
+    overflowY: "auto",
   },
   blockTitle: { fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.78)", marginBottom: 4 },
   blockText: {

@@ -1,5 +1,6 @@
 from datetime import datetime
 from uuid import uuid4
+from datetime import timezone
 
 from bson import ObjectId
 from django.contrib.auth.hashers import make_password, check_password
@@ -23,6 +24,17 @@ def oid(x):
         return ObjectId(x.strip())
     return None
 
+
+def serialize_letter(doc):
+    # JSON-safe
+    return {
+        "_id": str(doc.get("_id")),
+        "sender_id": str(doc.get("sender_id")),
+        "receiver_id": str(doc.get("receiver_id")),
+        "letter": doc.get("letter", ""),
+        "created_at": doc.get("created_at").isoformat() + "Z" if doc.get("created_at") else None,
+        "read_at": doc.get("read_at").isoformat() + "Z" if doc.get("read_at") else None,
+    }
 
 def serialize_mongo(doc):
     """
@@ -335,3 +347,149 @@ class LikesView(APIView):
             return Response({"ok": True}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+class WriteLatterView(APIView):
+    """
+    POST /api/writelatter/<user_id>/<profile_id>
+    Body: { "letter": "..." }
+    Saves one introduction letter from sender(user_id) to receiver(profile_id).
+    """
+
+    def post(self, request, user_id, profile_id):
+        db = get_db()
+        letters = db["letters"]
+        users = db["users"]
+
+        sender = oid(user_id)
+        receiver = oid(profile_id)
+
+        if not sender or not receiver:
+            return Response({"error": "Invalid user id / profile id"}, status=400)
+
+        if sender == receiver:
+            return Response({"error": "You can't send a letter to yourself"}, status=400)
+
+        # ensure both users exist
+        if not users.find_one({"_id": sender}, {"_id": 1}):
+            return Response({"error": "Sender not found"}, status=404)
+        if not users.find_one({"_id": receiver}, {"_id": 1}):
+            return Response({"error": "Receiver not found"}, status=404)
+
+        letter = (request.data.get("letter") or "").strip()
+        if not letter:
+            return Response({"error": "Letter is required"}, status=400)
+        if len(letter) > 2000:
+            return Response({"error": "Letter is too long (max 2000)"}, status=400)
+
+        # Optional: only one letter per pair
+        existing = letters.find_one({"sender_id": sender, "receiver_id": receiver})
+        if existing:
+            return Response({"error": "You already sent a letter to this user"}, status=409)
+
+        doc = {
+            "sender_id": sender,
+            "receiver_id": receiver,
+            "letter": letter,
+            "created_at": datetime.utcnow(),
+            "read_at": None,
+        }
+        inserted_id = letters.insert_one(doc).inserted_id
+
+        return Response({"ok": True, "letter_id": str(inserted_id)}, status=status.HTTP_201_CREATED)
+    
+class InboxView(APIView):
+    """
+    GET /api/inbox/<user_id>
+    Returns letters received (newest first), includes sender username.
+    """
+    def get(self, request, user_id):
+        db = get_db()
+        letters = db["letters"]
+        users = db["users"]
+
+        uid = oid(user_id)
+        if not uid:
+            return Response({"items": []}, status=200)
+
+        docs = list(letters.find({"receiver_id": uid}).sort("created_at", -1).limit(200))
+
+        # collect sender ids
+        sender_ids = []
+        for d in docs:
+            sid = d.get("sender_id")
+            if sid:
+                sender_ids.append(sid)
+
+        # fetch usernames in one query
+        sender_map = {}
+        if sender_ids:
+            sender_profiles = users.find(
+                {"_id": {"$in": list(set(sender_ids))}},
+                {"username": 1, "name": 1}
+            )
+            for sp in sender_profiles:
+                sender_map[str(sp["_id"])] = sp.get("username") or sp.get("name") or "Unknown"
+
+        out = []
+        for d in docs:
+            item = serialize_letter(d)
+            sid = item.get("sender_id")
+            item["sender_username"] = sender_map.get(str(sid), "Unknown")
+            out.append(item)
+
+        return Response({"items": out}, status=200)
+    
+class MarkLetterReadView(APIView):
+    # POST /api/letters/<letter_id>/read
+    def post(self, request, letter_id):
+        db = get_db()
+        letters = db["letters"]
+
+        lid = oid(letter_id)
+        if not lid:
+            return Response({"error": "Invalid letter id"}, status=400)
+
+        # optional: make sure only receiver can mark read
+        uid = oid(request.data.get("user_id"))
+        if not uid:
+            return Response({"error": "Invalid user id"}, status=400)
+
+        doc = letters.find_one({"_id": lid})
+        if not doc:
+            return Response({"error": "Letter not found"}, status=404)
+
+        if doc.get("receiver_id") != uid:
+            return Response({"error": "Not allowed"}, status=403)
+
+        now = datetime.now(timezone.utc)  # "today's date" stored as UTC ISO
+        letters.update_one(
+            {"_id": lid},
+            {"$set": {"read_at": now}}
+        )
+
+        return Response({"ok": True, "read_at": now.isoformat()}, status=200)
+    
+class DeleteLetterView(APIView):
+    # DELETE /api/letters/<letter_id>?user_id=<receiver_id>
+    def delete(self, request, letter_id):
+        db = get_db()
+        letters = db["letters"]
+
+        lid = oid(letter_id)
+        if not lid:
+            return Response({"error": "Invalid letter id"}, status=400)
+
+        uid = oid(request.query_params.get("user_id"))
+        if not uid:
+            return Response({"error": "Invalid user id"}, status=400)
+
+        doc = letters.find_one({"_id": lid})
+        if not doc:
+            return Response({"error": "Letter not found"}, status=404)
+
+        # only receiver can delete
+        if doc.get("receiver_id") != uid:
+            return Response({"error": "Not allowed"}, status=403)
+
+        letters.delete_one({"_id": lid})
+        return Response({"ok": True}, status=200)

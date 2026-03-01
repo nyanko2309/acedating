@@ -11,7 +11,7 @@ const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 const PAGE_SIZE = 24;
 const ORIENTATION_OPTIONS = ["ace", "aro", "aroace", "demi", "grey-asexual"];
 const LOOKING_FOR_OPTIONS = ["friendship", "monogamy-romance", "qpr", "polyamory-romance"];
-const GENDER_OPTIONS = ["male", "female", "non-binary", "other"];
+const GENDER_OPTIONS = ["man", "woman", "non-binary", "other"];
 const CITY_OPTIONS = [
   { value: "gush-dan", label: "Gush Dan (Tel Aviv / Ramat Gan / Holon / Bat Yam...)" },
   { value: "jerusalem-area", label: "Jerusalem area" },
@@ -120,6 +120,8 @@ function MultiSelect({ label, options, valueSet, onChangeSet, placeholder = "Any
 }
 
 function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
+  const navigate = useNavigate();
+
   const [imgOk, setImgOk] = useState(true);
   const fallback = `${PLACEHOLDER_AVATAR_URL}&seed=${encodeURIComponent(p.username || "ace")}`;
   const imgSrc = imgOk && p.image_url ? p.image_url : fallback;
@@ -156,6 +158,15 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
         >
           {isFav ? "★" : "☆"}
         </button>
+      </div>
+      <div style={{ display: "flex", gap: 10, padding: "0 14px 14px" }}>
+      <button
+      type="button"
+      style={S.secondaryBtn}
+      onClick={() => navigate(`/writelatter/${p._id}`)}
+        >
+        Write latter
+      </button>
       </div>
 
       <div style={S.cardBody}>
@@ -413,6 +424,8 @@ return (
     { to: "/home", label: "Home" },
     { to: "/profile", label: "My Profile" },
     { to: "/saved", label: "Saved" },
+    { to: "/random", label: "Let luck choose" },
+    { to: "/latters", label: "Inbox" },
   ]}
   />
 
@@ -486,23 +499,34 @@ return (
                 <input
                   style={S.ageInput}
                   type="number"
-                  min="18"
-                  max="120"
+                  //min="18"
+                  //max="120"
                   value={ageMin}
-                  onChange={(e) =>
-                    setAgeMin(e.target.value === "" ? "" : String(clampNum(e.target.value, 18, 120)))
-                  }
+                  onChange={(e) => {
+  const v = e.target.value;
+  // allow empty or digits only
+  if (v === "" || /^\d+$/.test(v)) setAgeMin(v);
+}}
+onBlur={() => {
+  if (ageMin === "") return;
+  setAgeMin(String(clampNum(ageMin, 18, 120)));
+}}
                 />
                 <span style={S.ageDash}>—</span>
                 <input
                   style={S.ageInput}
                   type="number"
-                  min="18"
-                  max="120"
+                  //min="18"
+                  //max="120"
                   value={ageMax}
-                  onChange={(e) =>
-                    setAgeMax(e.target.value === "" ? "" : String(clampNum(e.target.value, 18, 120)))
-                  }
+                  onChange={(e) => {
+  const v = e.target.value;
+  if (v === "" || /^\d+$/.test(v)) setAgeMax(v);
+}}
+onBlur={() => {
+  if (ageMax === "") return;
+  setAgeMax(String(clampNum(ageMax, 18, 120)));
+}}
                 />
               </div>
               <div style={S.ageHint}>Tip: set only min or max if you want</div>

@@ -371,6 +371,8 @@ return (
     { to: "/home", label: "Home" },
     { to: "/profile", label: "My Profile" },
     { to: "/saved", label: "Saved" },
+    { to: "/random", label: "Let luck choose" },
+    { to: "/latters", label: "Inbox" },
   ]}
   />
 

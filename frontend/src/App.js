@@ -9,7 +9,9 @@ import LoginPage from "./pages/LoginPage";
 import Homepage from "./pages/Homepage";
 import Profilepage from "./pages/Profilepage";
 import SavedPage from "./pages/SavedPage";
-
+import Random from "./pages/Random";
+import Latters from "./pages/Latters";
+import WriteLatter from "./pages/WriteLatter";
 
 function App() {
   
@@ -22,7 +24,9 @@ function App() {
         <Route path="/home" element={<Homepage />} /> 
         <Route path="/profile" element={<Profilepage/>} />
         <Route path="/saved" element={<SavedPage/>} />
-
+        <Route path="/random" element={<Random/>} />
+        <Route path="/latters" element={<Latters/>} />
+        <Route path="/writelatter/:profile_id" element={<WriteLatter />} />
       </Routes>
 </Router>
     

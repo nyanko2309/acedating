@@ -309,7 +309,7 @@ msWrap: {
     maxHeight: "90vh",
     background: "rgba(255,255,255,0.92)",
     borderRadius: 18,
-    overflow: "hidden",
+    overflowY: "auto",
     boxShadow: "0 30px 120px rgba(0,0,0,0.35)",
     border: "1px solid rgba(255,255,255,0.14)",
    // backdropFilter: "blur(10px)",

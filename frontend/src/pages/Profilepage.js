@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import TopBar from "./TopBar";
 
-
-const API_BASE =process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
+const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 
 export default function ProfilePage() {
   const userId = useMemo(() => localStorage.getItem("user_id"), []);
@@ -20,7 +19,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [edit, setEdit] = useState(false);
 
-  // ✅ avatar upload state
+  // avatar upload state
   const [avatarFile, setAvatarFile] = useState(null);
 
   // editable fields
@@ -31,10 +30,11 @@ export default function ProfilePage() {
   const [gender, setGender] = useState("");
   const [orientation, setOrientation] = useState("");
   const [lookingFor, setLookingFor] = useState("");
+  const [preference, setPreference] = useState(""); // ✅ NEW
   const [info, setInfo] = useState("");
   const [contact, setContact] = useState("");
 
-  // ✅ store both url + public_id so we can delete old image later
+  // store both url + public_id so we can delete old image later
   const [imageUrl, setImageUrl] = useState("");
   const [imagePublicId, setImagePublicId] = useState("");
 
@@ -56,10 +56,10 @@ export default function ProfilePage() {
     form.append("file", file);
     form.append("upload_preset", UPLOAD_PRESET);
 
-    const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-      { method: "POST", body: form }
-    );
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+      method: "POST",
+      body: form,
+    });
 
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error?.message || "Cloudinary upload failed");
@@ -93,6 +93,7 @@ export default function ProfilePage() {
         setGender(p?.gender || "");
         setOrientation(p?.orientation || "");
         setLookingFor(p?.looking_for || "");
+        setPreference(p?.preference || ""); // ✅ NEW
         setInfo(p?.info || "");
         setContact(p?.contact || "");
 
@@ -123,6 +124,7 @@ export default function ProfilePage() {
     setGender(profile?.gender || "");
     setOrientation(profile?.orientation || "");
     setLookingFor(profile?.looking_for || "");
+    setPreference(profile?.preference || ""); // ✅ NEW
     setInfo(profile?.info || "");
     setContact(profile?.contact || "");
 
@@ -141,7 +143,7 @@ export default function ProfilePage() {
       let finalUrl = imageUrl || "";
       let finalPublicId = imagePublicId || "";
 
-      // ✅ if file selected, upload and override imageUrl/publicId
+      // if file selected, upload and override imageUrl/publicId
       if (avatarFile) {
         setUploadingAvatar(true);
         const up = await uploadAvatarToCloudinary(avatarFile);
@@ -150,7 +152,7 @@ export default function ProfilePage() {
         setUploadingAvatar(false);
       }
 
-      // 1) save new profile data in DB (including public_id)
+      // save new profile data in DB (including public_id)
       const payload = {
         username,
         name,
@@ -159,6 +161,7 @@ export default function ProfilePage() {
         gender,
         orientation,
         looking_for: lookingFor,
+        preference, // ✅ NEW
         info,
         contact,
         image_url: finalUrl,
@@ -174,14 +177,10 @@ export default function ProfilePage() {
       setImageUrl(res.data?.image_url || finalUrl);
       setImagePublicId(res.data?.image_public_id || finalPublicId);
 
-      // 2) delete old image from cloud (server-side)
+      // delete old image from cloud (server-side)
       const changed = oldPublicId && oldPublicId !== finalPublicId;
       if (changed) {
-        await axios.post(
-          `${API_BASE}/api/cloudinary/delete`,
-          { public_id: oldPublicId },
-          { headers }
-        );
+        await axios.post(`${API_BASE}/api/cloudinary/delete`, { public_id: oldPublicId }, { headers });
       }
     } catch (err) {
       const msg = err?.response?.data?.error || err.message || "Failed to save profile";
@@ -194,15 +193,15 @@ export default function ProfilePage() {
 
   return (
     <div style={S.page}>
-       <TopBar
-         links={[
-    { to: "/home", label: "Home" },
-    { to: "/profile", label: "My Profile" },
-    { to: "/saved", label: "Saved" },
-    { to: "/random", label: "Let luck choose" },
-    { to: "/latters", label: "Inbox" },
-  ]}
-       />
+      <TopBar
+        links={[
+          { to: "/home", label: "Home" },
+          { to: "/profile", label: "My Profile" },
+          { to: "/saved", label: "Saved" },
+          { to: "/random", label: "Let luck choose" },
+          { to: "/latters", label: "Inbox" },
+        ]}
+      />
 
       <main style={S.main}>
         <div style={S.card}>
@@ -220,20 +219,10 @@ export default function ProfilePage() {
                   </button>
                 ) : (
                   <>
-                    <button
-                      style={S.btnGhost}
-                      onClick={cancelEdit}
-                      type="button"
-                      disabled={saving || uploadingAvatar}
-                    >
+                    <button style={S.btnGhost} onClick={cancelEdit} type="button" disabled={saving || uploadingAvatar}>
                       Cancel
                     </button>
-                    <button
-                      style={S.btn}
-                      onClick={saveProfile}
-                      type="button"
-                      disabled={saving || uploadingAvatar}
-                    >
+                    <button style={S.btn} onClick={saveProfile} type="button" disabled={saving || uploadingAvatar}>
                       {uploadingAvatar ? "Uploading…" : saving ? "Saving…" : "Save"}
                     </button>
                   </>
@@ -277,9 +266,7 @@ export default function ProfilePage() {
                       onChange={(e) => setImageUrl(e.target.value)}
                       placeholder="https://..."
                     />
-                    <div style={S.hint}>
-                      If you upload a file, it will override this URL.
-                    </div>
+                    <div style={S.hint}>If you upload a file, it will override this URL.</div>
                   </div>
                 )}
               </div>
@@ -292,6 +279,10 @@ export default function ProfilePage() {
                 <Field label="Gender" value={gender} setValue={setGender} edit={edit} />
                 <Field label="Orientation" value={orientation} setValue={setOrientation} edit={edit} />
                 <Field label="Looking for" value={lookingFor} setValue={setLookingFor} edit={edit} />
+
+                {/* ✅ NEW FIELD */}
+                <TextField label="Preference" value={preference} setValue={setPreference} edit={edit} maxLength={400} />
+
                 <Field label="Contact" value={contact} setValue={setContact} edit={edit} />
                 <TextField label="Info" value={info} setValue={setInfo} edit={edit} maxLength={1000} />
               </div>
@@ -318,7 +309,6 @@ function Field({ label, value, setValue, edit, type = "text" }) {
 
 function TextField({ label, value, setValue, edit, maxLength }) {
   return (
-    
     <div style={{ ...S.field, gridColumn: "1 / -1" }}>
       <div style={S.label}>{label}</div>
       {!edit ? (
@@ -330,7 +320,7 @@ function TextField({ label, value, setValue, edit, maxLength }) {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             maxLength={maxLength}
-            rows={5}
+            rows={4}
           />
           <div style={S.hint}>
             {value.length}/{maxLength}
@@ -350,7 +340,6 @@ const S = {
       "radial-gradient(900px 700px at 85% 20%, rgba(121, 49, 255, 0.22), transparent 55%)," +
       "radial-gradient(1000px 800px at 40% 95%, rgba(206, 139, 250, 0.22), transparent 55%)," +
       "linear-gradient(120deg, #edc2ff, #693782 60%, #100a12)",
-  
   },
 
   main: { padding: 16, display: "flex", justifyContent: "center" },

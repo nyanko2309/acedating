@@ -160,7 +160,8 @@ export default function Homepage() {
 
         // If your backend supports big limits, this is simplest.
         // Otherwise, tell me and I’ll adapt to cursor pagination properly.
-        const res = await axios.get(`${API_BASE}/api/profiles`, { params: { limit: 5000 } });
+        const params = { limit: 24 };
+        const res = await axios.get(`${API_BASE}/api/allprofiles`, { params, headers: { "X-User-Id": myId } })
         const items = Array.isArray(res.data?.items) ? res.data.items : [];
 
         // remove self

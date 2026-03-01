@@ -292,7 +292,7 @@ useEffect(() => {
       const params = { limit: PAGE_SIZE };
       if (!reset && cursor) params.cursor = cursor;
 
-      const res = await axios.get(`${API_BASE}/api/profiles`, { params });
+      const res = await axios.get(`${API_BASE}/api/allprofiles`, { params, headers: { "X-User-Id": myId } })
 
       const items = Array.isArray(res.data?.items) ? res.data.items : [];
       const next = res.data?.next_cursor ?? null;

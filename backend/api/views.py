@@ -26,22 +26,27 @@ def oid(x):
 
 
 def serialize_letter(doc):
-    # JSON-safe
+    def s_oid(v):
+        return str(v) if isinstance(v, ObjectId) else (str(v) if v else None)
+
+    def s_dt(v):
+        if not v:
+            return None
+        # ensure timezone-aware ISO
+        if isinstance(v, datetime) and v.tzinfo is None:
+            v = v.replace(tzinfo=timezone.utc)
+        return v.isoformat()
+
     return {
-        "_id": str(doc.get("_id")),
-        "sender_id": str(doc.get("sender_id")),
-        "receiver_id": str(doc.get("receiver_id")),
-        "letter": doc.get("letter", ""),
-        "created_at": doc.get("created_at").isoformat() + "Z" if doc.get("created_at") else None,
-        "read_at": doc.get("read_at").isoformat() + "Z" if doc.get("read_at") else None,
+        "_id": s_oid(doc.get("_id")),
+        "sender_id": s_oid(doc.get("sender_id")),
+        "receiver_id": s_oid(doc.get("receiver_id")),
+        "letter": doc.get("letter", "") or "",
+        "created_at": s_dt(doc.get("created_at")),
+        "read_at": s_dt(doc.get("read_at")),
     }
 
 def serialize_mongo(doc):
-    """
-    Convert Mongo fields that break JSON (ObjectId, datetime) into safe values.
-    NOTE: This is NOT recursive. Option B avoids returning fields like 'liked'
-    in endpoints that would otherwise crash due to nested ObjectIds.
-    """
     if doc is None:
         return None
 
@@ -50,7 +55,9 @@ def serialize_mongo(doc):
         if isinstance(v, ObjectId):
             out[k] = str(v)
         elif isinstance(v, datetime):
-            out[k] = v.isoformat() + "Z"
+            if v.tzinfo is None:
+                v = v.replace(tzinfo=timezone.utc)
+            out[k] = v.isoformat()
         else:
             out[k] = v
     return out
@@ -60,6 +67,7 @@ PROFILE_ALLOWED_FIELDS = {
     "username",
     "name",
     "age",
+    "preference",
     "city",
     "gender",
     "orientation",
@@ -76,7 +84,7 @@ PROFILE_ALLOWED_FIELDS = {
 class SignUpView(APIView):
     """
     POST /api/signup
-    Body: { username, password, name, age, orientation, looking_for, image_url, city, gender, info, contact }
+    Body: { username, password, name, age, orientation, looking_for, image_url, city, gender, info, contact, preference }
     Creates user and returns token + user_id.
     """
 
@@ -99,20 +107,22 @@ class SignUpView(APIView):
         except Exception:
             return Response({"error": "age must be a number"}, status=400)
 
+        # ✅ default preference to empty string
+        preference = (data.get("preference") or "").strip()
+
         now = datetime.utcnow()
         token = str(uuid4())
 
         user_doc = {
-            # auth
             "username": username,
             "password_hash": make_password(password),
             "session_token": token,
             "created_at": now,
             "updated_at": now,
 
-            # profile fields
             "name": (data.get("name") or "").strip() or None,
             "age": age,
+            "preference": preference,  # ✅ fixed
             "orientation": data.get("orientation"),
             "looking_for": data.get("looking_for"),
             "image_url": data.get("image_url"),
@@ -121,17 +131,14 @@ class SignUpView(APIView):
             "info": data.get("info"),
             "contact": data.get("contact"),
 
-            # likes list
             "liked": [],
         }
 
-        user_id = users.insert_one(user_doc).inserted_id  # ObjectId
-
+        user_id = users.insert_one(user_doc).inserted_id
         return Response(
             {"message": "Signup successful", "token": token, "user_id": str(user_id)},
             status=status.HTTP_201_CREATED,
         )
-
 
 class LoginView(APIView):
     """
@@ -191,13 +198,44 @@ class ProfilesListView(APIView):
         limit = max(1, min(limit, 60))
 
         cursor = request.query_params.get("cursor")
+
+        # ---------- identify viewer ----------
+        viewer_id = request.headers.get("X-User-Id") or request.query_params.get("viewer_id")
+        viewer_oid = oid(viewer_id) if viewer_id else None
+
+        viewer_gender = None
+        if viewer_oid:
+            viewer_doc = users.find_one({"_id": viewer_oid}, {"gender": 1})
+            viewer_gender = (viewer_doc.get("gender") if viewer_doc else None)
+
+        # ---------- base query ----------
         q = {}
+
         if cursor:
             c = oid(cursor)
             if c:
                 q["_id"] = {"$gt": c}
 
-        # exclude sensitive fields + exclude liked (OPTION B FIX)
+        # exclude self if we know viewer
+        if viewer_oid:
+            q["_id"] = q.get("_id", {})
+            if isinstance(q["_id"], dict):
+                q["_id"]["$ne"] = viewer_oid
+            else:
+                # in case you ever change _id filter structure
+                q["_id"] = {"$ne": viewer_oid}
+
+        # ---------- preference filter ----------
+        # If viewer has gender, only return profiles that prefer that gender OR have empty/no preference
+        if viewer_gender in {"woman", "man", "non-binary", "other"}:
+            q["$or"] = [
+                {"preference": viewer_gender},
+                {"preference": ""},
+                {"preference": None},
+                {"preference": {"$exists": False}},
+            ]
+
+        # ---------- projection ----------
         projection = {
             "password_hash": 0,
             "session_token": 0,

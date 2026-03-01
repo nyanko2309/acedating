@@ -98,7 +98,7 @@ export default function Inbox() {
       border: "1px solid rgba(255,255,255,0.14)",
       background: "rgba(255,255,255,0.06)",
       borderRadius: 18,
-      overflow: "hidden",
+      
     },
     head: {
       display: "grid",
@@ -120,6 +120,7 @@ export default function Inbox() {
       alignItems: "start",
       cursor: "pointer",
       transition: "transform 160ms ease, background 160ms ease",
+      
     },
     dot: {
       width: 8,
@@ -136,12 +137,15 @@ export default function Inbox() {
       background: bg,
       border: "1px solid rgba(255,255,255,0.14)",
       whiteSpace: "nowrap",
+      
       display: "inline-flex",
       alignItems: "center",
       gap: 6,
     }),
     msg: (unread) => ({
       whiteSpace: "pre-wrap",
+      overflow:"hidden",
+      height:50,
       opacity: unread ? 1 : 0.88,
       lineHeight: 1.35,
     }),

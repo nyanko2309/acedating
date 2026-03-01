@@ -6,7 +6,7 @@ urlpatterns = [
     path("signup", SignUpView.as_view()),
     path("login", LoginView.as_view()),
     path("cloudinary/delete", CloudinaryDeleteView.as_view(), name="cloudinary-delete"),
-    path("profiles", ProfilesListView.as_view()),
+    path("allprofiles", ProfilesListView.as_view()),
     path("profilessaved/<str:user_id>", ProfilessavedListView.as_view()),
     path("writelatter/<str:user_id>/<str:profile_id>",WriteLatterView.as_view()),
     path("inbox/<str:user_id>",InboxView.as_view()),

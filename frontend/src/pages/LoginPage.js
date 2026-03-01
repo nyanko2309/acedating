@@ -14,7 +14,6 @@ async function uploadAvatarToCloudinary(file) {
   const form = new FormData();
   form.append("file", file);
   form.append("upload_preset", UPLOAD_PRESET);
-  // preset already sets folder=profiles, so no need to send folder
 
   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
     method: "POST",
@@ -24,18 +23,18 @@ async function uploadAvatarToCloudinary(file) {
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || "Cloudinary upload failed");
 
-  return data.secure_url; // save to Mongo as image_url
+  return data.secure_url;
 }
 
-const API_BASE =process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
-
+const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 const BASE_URL_Login = `${API_BASE}/api/login`;
 const BASE_URL_SignUp = `${API_BASE}/api/signup`;
 
 function LoginPage() {
-  //loadig
+  // loading popup
   const [loadingPopup, setLoadingPopup] = useState(false);
   const [loadingText, setLoadingText] = useState("Loading…");
+
   // LOGIN
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -47,7 +46,8 @@ function LoginPage() {
   const [signupAge, setSignupAge] = useState("");
   const [signupOrientation, setSignupOrientation] = useState("");
   const [signupLookingFor, setSignupLookingFor] = useState("");
-  const [signupAvatarFile, setSignupAvatarFile] = useState(null); // ✅ file upload
+  const [signupPreference, setSignupPreference] = useState(""); // ✅ NEW
+  const [signupAvatarFile, setSignupAvatarFile] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [signupAvatarPreview, setSignupAvatarPreview] = useState(null);
   const [signupCity, setSignupCity] = useState("");
@@ -55,444 +55,420 @@ function LoginPage() {
   const [signupInfo, setSignupInfo] = useState("");
   const [signupContact, setSignupContact] = useState("");
 
-
   const handleLogin = async (e) => {
-  e.preventDefault();
-
-  setLoadingText("Logging you in…");
-  setLoadingPopup(true);
-
-  try {
-    const res = await axios.post(BASE_URL_Login, {
-      username: loginUsername,
-      password: loginPassword,
-    }, {
-      timeout: 15000, // ✅ prevent infinite waiting
-    });
-
-    if (res.data.user_id) localStorage.setItem("user_id", res.data.user_id);
-    if (res.data.token) localStorage.setItem("token", res.data.token);
-
-    // ✅ DON'T close popup here — let navigation replace the page
-    setLoadingText("Opening home…");
-    window.location.assign("/home");
-
-    // ✅ safety: if navigation doesn't happen (rare), close after 6s
-    setTimeout(() => setLoadingPopup(false), 6000);
-
-  } catch (err) {
-    setLoadingPopup(false);
-    const errorMsg =
-      err?.code === "ECONNABORTED"
-        ? "Server is taking too long. Please try again."
-        : err?.response?.data?.error || err.message || "Login failed";
-    alert(errorMsg);
-  }
-};
-
-  const handleSignup = async (e) => {
-  e.preventDefault();
-
-  try {
-    let finalImageUrl = null;
-
-    if (signupAvatarFile) {
-      setLoadingText("Uploading your image…");
-      setLoadingPopup(true);
-      setUploadingAvatar(true);
-
-      finalImageUrl = await uploadAvatarToCloudinary(signupAvatarFile);
-
-      setUploadingAvatar(false);
-    }
-
-    setLoadingText("Creating your account…");
-    setLoadingPopup(true);
-
-    const payload = {
-      username: signupUsername,
-      password: signupPassword,
-      name: signupName,
-      age: Number(signupAge),
-      orientation: signupOrientation,
-      looking_for: signupLookingFor,
-      image_url: finalImageUrl,
-      city: signupCity,
-      gender: signupGender,
-      info: signupInfo,
-      contact: signupContact,
-    };
-
-    await axios.post(BASE_URL_SignUp, payload, { timeout: 15000 });
+    e.preventDefault();
 
     setLoadingText("Logging you in…");
-    const loginRes = await axios.post(
-      BASE_URL_Login,
-      { username: signupUsername, password: signupPassword },
-      { timeout: 15000 }
-    );
+    setLoadingPopup(true);
 
-    if (loginRes.data.user_id) localStorage.setItem("user_id", loginRes.data.user_id);
-    if (loginRes.data.token) localStorage.setItem("token", loginRes.data.token);
+    try {
+      const res = await axios.post(
+        BASE_URL_Login,
+        { username: loginUsername, password: loginPassword },
+        { timeout: 15000 }
+      );
 
-    setLoadingText("Opening home…");
-    window.location.assign("/home");
-    setTimeout(() => setLoadingPopup(false), 6000);
+      if (res.data.user_id) localStorage.setItem("user_id", res.data.user_id);
+      if (res.data.token) localStorage.setItem("token", res.data.token);
 
-  } catch (err) {
-    setLoadingPopup(false);
-    setUploadingAvatar(false);
-    const errorMsg =
-      err?.code === "ECONNABORTED"
-        ? "Server is taking too long. Please try again."
-        : err?.response?.data?.error || err.message || "Sign up failed";
-    alert(errorMsg);
-  }
-};
+      setLoadingText("Opening home…");
+      window.location.assign("/home");
+      setTimeout(() => setLoadingPopup(false), 6000);
+    } catch (err) {
+      setLoadingPopup(false);
+      const errorMsg =
+        err?.code === "ECONNABORTED"
+          ? "Server is taking too long. Please try again."
+          : err?.response?.data?.error || err.message || "Login failed";
+      alert(errorMsg);
+    }
+  };
+
+  const handleSignup = async (e) => {
+    e.preventDefault();
+
+    try {
+      let finalImageUrl = null;
+
+      if (signupAvatarFile) {
+        setLoadingText("Uploading your image…");
+        setLoadingPopup(true);
+        setUploadingAvatar(true);
+
+        finalImageUrl = await uploadAvatarToCloudinary(signupAvatarFile);
+
+        setUploadingAvatar(false);
+      }
+
+      setLoadingText("Creating your account…");
+      setLoadingPopup(true);
+
+      const payload = {
+        username: signupUsername,
+        password: signupPassword,
+        name: signupName,
+        age: Number(signupAge),
+        orientation: signupOrientation,
+        looking_for: signupLookingFor,
+        preference: signupPreference, // ✅ NEW
+        image_url: finalImageUrl,
+        city: signupCity,
+        gender: signupGender,
+        info: signupInfo,
+        contact: signupContact,
+      };
+
+      await axios.post(BASE_URL_SignUp, payload, { timeout: 15000 });
+
+      setLoadingText("Logging you in…");
+      const loginRes = await axios.post(
+        BASE_URL_Login,
+        { username: signupUsername, password: signupPassword },
+        { timeout: 15000 }
+      );
+
+      if (loginRes.data.user_id) localStorage.setItem("user_id", loginRes.data.user_id);
+      if (loginRes.data.token) localStorage.setItem("token", loginRes.data.token);
+
+      setLoadingText("Opening home…");
+      window.location.assign("/home");
+      setTimeout(() => setLoadingPopup(false), 6000);
+    } catch (err) {
+      setLoadingPopup(false);
+      setUploadingAvatar(false);
+      const errorMsg =
+        err?.code === "ECONNABORTED"
+          ? "Server is taking too long. Please try again."
+          : err?.response?.data?.error || err.message || "Sign up failed";
+      alert(errorMsg);
+    }
+  };
 
   return (
     <>
       <style>{`
-  .wrapper {
-  --input-focus: #2d8cf0;
-  --font-color: #323232;
-  --font-color-sub: #666;
-  --bg-color: #fff;
-  --main-color: #323232;
-}
+        .wrapper {
+          --input-focus: #2d8cf0;
+          --font-color: #323232;
+          --font-color-sub: #666;
+          --bg-color: #fff;
+          --main-color: #323232;
+        }
 
-html, body { height: 100%; }
+        html, body { height: 100%; }
 
-body {
-  margin: 0;
-  min-height: 100vh;
+        body {
+          margin: 0;
+          min-height: 100vh;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          padding: 14px 14px 24px;
+          box-sizing: border-box;
+          font-family: 'Poppins', sans-serif;
+          background: linear-gradient(115deg, #dfdfdf 10%, #280239 90%);
+        }
 
-  /* ✅ closer to top (not vertically centered) */
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+        .page-header{
+          width: 100%;
+          max-width: 420px;
+          margin: 0 auto 14px;
+          text-align: center;
+          padding: 6px 10px 0;
+          box-sizing: border-box;
+        }
 
-  /* ✅ tweak this to move up/down */
-  padding: 14px 14px 24px;
-  box-sizing: border-box;
+        .page-title{
+          margin: 0 0 8px;
+          font-size: clamp(28px, 7vw, 40px);
+          font-weight: 900;
+          letter-spacing: 2px;
+          color: #ffffff;
+          text-shadow: 0 2px 0 rgba(0,0,0,0.25);
+        }
 
-  font-family: 'Poppins', sans-serif;
-  background: linear-gradient(115deg, #dfdfdf 10%, #280239 90%);
-}
+        .page-sub{
+          margin: 0;
+          font-size: 13px;
+          line-height: 1.35;
+          color: rgba(255,255,255,0.92);
+          background: rgba(0,0,0,0.22);
+          border: 1px solid rgba(255,255,255,0.18);
+          border-radius: 12px;
+          padding: 10px 12px;
+        }
 
-.page-header{
-  width: 100%;
-  max-width: 420px;
-  margin: 0 auto 14px;
-  text-align: center;
-  padding: 6px 10px 0;
-  box-sizing: border-box;
-}
+        .page-sub a{
+          color: #ffffff;
+          font-weight: 700;
+          text-decoration: underline;
+          text-underline-offset: 2px;
+        }
 
-.page-title{
-  margin: 0 0 8px;
-  font-size: clamp(28px, 7vw, 40px);
-  font-weight: 900;
-  letter-spacing: 2px;
-  color: #ffffff;
-  text-shadow: 0 2px 0 rgba(0,0,0,0.25);
-}
+        @media (max-width: 420px){
+          .page-header{ margin-bottom: 10px; }
+          .page-sub{ font-size: 12px; }
+        }
 
-.page-sub{
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.35;
-  color: rgba(255,255,255,0.92);
-  background: rgba(0,0,0,0.22);
-  border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 12px;
-  padding: 10px 12px;
-}
+        .wrapper {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          margin-top: 6px;
+        }
 
-.page-sub a{
-  color: #ffffff;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
+        .switch {
+          transform: none;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 18px;
+          width: 50px;
+          height: 20px;
+        }
 
-@media (max-width: 420px){
-  .page-header{ margin-bottom: 10px; }
-  .page-sub{ font-size: 12px; }
-}
-  
-.wrapper {
-  width: 100%;
-  display: flex;
-  justify-content: center;
+        .card-side::before {
+          position: absolute;
+          content: 'Log in';
+          left: -70px;
+          top: 0;
+          width: 100px;
+          height: 560px;
+          text-decoration: underline;
+          color: var(--font-color);
+          font-weight: 600;
+        }
 
-  /* ✅ optional tiny push down/up */
-  margin-top: 6px;
-}
+        .card-side::after {
+          position: absolute;
+          content: 'Sign up';
+          height: 560px;
+          left: 70px;
+          top: 0;
+          width: 100px;
+          text-decoration: none;
+          color: var(--font-color);
+          font-weight: 600;
+        }
 
-/* ---- Switch ---- */
-.switch {
-  transform: none;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-  width: 50px;
-  height: 20px;
-}
+        @media (max-width: 420px) {
+          .card-side::before,
+          .card-side::after { display: none; }
+        }
 
-.card-side::before {
-  position: absolute;
-  content: 'Log in';
-  left: -70px;
-  top: 0;
-  width: 100px;
-  height: 560px;
-  text-decoration: underline;
-  color: var(--font-color);
-  font-weight: 600;
-}
+        .toggle { opacity: 0; width: 0; height: 0; }
 
-.card-side::after {
-  position: absolute;
-  content: 'Sign up';
-  height: 560px;
-  left: 70px;
-  top: 0;
-  width: 100px;
-  text-decoration: none;
-  color: var(--font-color);
-  font-weight: 600;
-}
+        .slider {
+          box-sizing: border-box;
+          border-radius: 5px;
+          border: 2px solid var(--main-color);
+          box-shadow: 4px 4px var(--main-color);
+          position: absolute;
+          cursor: pointer;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-color: var(--bg-color);
+          transition: 0.3s;
+        }
 
-@media (max-width: 420px) {
-  .card-side::before,
-  .card-side::after { display: none; }
-}
+        .slider:before {
+          box-sizing: border-box;
+          position: absolute;
+          content: "";
+          height: 20px;
+          width: 20px;
+          border: 2px solid var(--main-color);
+          border-radius: 5px;
+          left: -2px;
+          bottom: 2px;
+          background-color: var(--bg-color);
+          box-shadow: 0 3px 0 var(--main-color);
+          transition: 0.3s;
+        }
 
-.toggle { opacity: 0; width: 0; height: 0; }
+        .toggle:checked + .slider { background-color: var(--input-focus); }
+        .toggle:checked + .slider:before { transform: translateX(30px); }
+        .toggle:checked ~ .card-side:before { text-decoration: none; }
+        .toggle:checked ~ .card-side:after { text-decoration: underline; }
 
-.slider {
-  box-sizing: border-box;
-  border-radius: 5px;
-  border: 2px solid var(--main-color);
-  box-shadow: 4px 4px var(--main-color);
-  position: absolute;
-  cursor: pointer;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: var(--bg-color);
-  transition: 0.3s;
-}
+        .flip-card__inner {
+          width: min(380px, 92vw);
+          min-height: 560px;
+          max-height: 86svh;
+          height: auto;
+          position: relative;
+          background-color: transparent;
+          perspective: 1000px;
+          text-align: center;
+          transition: transform 0.8s;
+          transform-style: preserve-3d;
+        }
 
-.slider:before {
-  box-sizing: border-box;
-  position: absolute;
-  content: "";
-  height: 20px;
-  width: 20px;
-  border: 2px solid var(--main-color);
-  border-radius: 5px;
-  left: -2px;
-  bottom: 2px;
-  background-color: var(--bg-color);
-  box-shadow: 0 3px 0 var(--main-color);
-  transition: 0.3s;
-}
+        @media (max-width: 420px) {
+          .flip-card__inner {
+            min-height: 650px;
+            max-height: 88svh;
+          }
+        }
 
-.toggle:checked + .slider { background-color: var(--input-focus); }
-.toggle:checked + .slider:before { transform: translateX(30px); }
-.toggle:checked ~ .card-side:before { text-decoration: none; }
-.toggle:checked ~ .card-side:after { text-decoration: underline; }
+        .toggle:checked ~ .flip-card__inner { transform: rotateY(180deg); }
 
-/* ---- Flip card (IMPORTANT: keep stable height for 3D) ---- */
-.flip-card__inner {
-  width: min(380px, 92vw);
+        .flip-card__front,
+        .flip-card__back {
+          position: absolute;
+          top: 0; left: 0;
+          width: 100%;
+          height: 100%;
+          padding: 18px;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 12px;
+          -webkit-backface-visibility: hidden;
+          backface-visibility: hidden;
+          background: lightgrey;
+          border-radius: 10px;
+          border: 2px solid var(--main-color);
+          box-shadow: 4px 4px var(--main-color);
+          overflow: hidden;
+        }
 
-  /* ✅ responsive height for phone */
-  min-height: 560px;
-  max-height: 86svh;   /* better than vh on mobile toolbars */
-  height: auto;
+        .flip-card__back {
+          transform: rotateY(180deg);
+          justify-content: flex-start;
+          padding-top: 16px;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+        }
 
-  position: relative;
-  background-color: transparent;
-  perspective: 1000px;
-  text-align: center;
-  transition: transform 0.8s;
-  transform-style: preserve-3d;
-}
+        .flip-card__form {
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+        }
 
-@media (max-width: 420px) {
-  .flip-card__inner {
-    min-height: 600px;
-    max-height: 88svh;
-  }
-}
+        .title {
+          margin: 8px 0;
+          font-size: 24px;
+          font-weight: 900;
+          text-align: center;
+          color: var(--main-color);
+        }
 
-.toggle:checked ~ .flip-card__inner {
-  transform: rotateY(180deg);
-}
+        .flip-card__input {
+          width: min(320px, 100%);
+          height: 42px;
+          border-radius: 8px;
+          border: 2px solid var(--main-color);
+          background-color: var(--bg-color);
+          box-shadow: 4px 4px var(--main-color);
+          font-size: 15px;
+          font-weight: 600;
+          color: var(--font-color);
+          padding: 8px 10px;
+          outline: none;
+          box-sizing: border-box;
+        }
 
-.flip-card__front,
-.flip-card__back {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%;
+        .flip-card__input::placeholder { color: var(--font-color-sub); opacity: 0.85; }
+        .flip-card__input:focus { border: 2px solid var(--input-focus); }
 
-  /* ✅ FIX: was "height: 300;" (missing px). Must fill the inner */
-  height: 100%;
+        textarea.flip-card__input {
+          height: 90px !important;
+          resize: none;
+        }
 
-  padding: 18px;
-  box-sizing: border-box;
+        .flip-card__btn {
+          margin: 10px 0 0;
+          width: min(220px, 100%);
+          height: 44px;
+          border-radius: 8px;
+          border: 2px solid var(--main-color);
+          background-color: var(--bg-color);
+          box-shadow: 4px 4px var(--main-color);
+          font-size: 17px;
+          font-weight: 600;
+          color: var(--font-color);
+          cursor: pointer;
+        }
 
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 12px;
+        .flip-card__btn:active {
+          box-shadow: 0px 0px var(--main-color);
+          transform: translate(3px, 3px);
+        }
 
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
+        .loading-overlay{
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.55);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          backdrop-filter: blur(2px);
+        }
 
-  background: lightgrey;
-  border-radius: 10px;
-  border: 2px solid var(--main-color);
-  box-shadow: 4px 4px var(--main-color);
-  overflow: hidden;
-}
+        .loading-box{
+          background: rgba(255,255,255,0.92);
+          border: 2px solid var(--main-color);
+          box-shadow: 4px 4px var(--main-color);
+          border-radius: 12px;
+          padding: 18px 18px;
+          width: min(320px, 90vw);
+          text-align: center;
+          font-weight: 800;
+          color: #222;
+        }
 
-.flip-card__back {
-  transform: rotateY(180deg);
-  justify-content: flex-start; /* ✅ signup is long, start from top */
-  padding-top: 16px;
-  overflow-y: auto;            /* ✅ scroll inside */
-  -webkit-overflow-scrolling: touch;
-}
+        .spinner{
+          width: 28px;
+          height: 28px;
+          border: 3px solid rgba(0,0,0,0.2);
+          border-top-color: rgba(0,0,0,0.8);
+          border-radius: 50%;
+          margin: 0 auto 10px;
+          animation: spin 0.8s linear infinite;
+        }
 
-.flip-card__form {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
+        @keyframes spin{ to { transform: rotate(360deg); } }
 
-.title {
-  margin: 8px 0;
-  font-size: 24px;
-  font-weight: 900;
-  text-align: center;
-  color: var(--main-color);
-}
+        .helper {
+          width: min(320px, 100%);
+          font-size: 12px;
+          color: #333;
+          opacity: 0.85;
+          text-align: left;
+          box-sizing: border-box;
+          margin-top: -6px;
+        }
+      `}</style>
 
-.flip-card__input {
-  width: min(320px, 100%);
-  height: 42px;
-  border-radius: 8px;
-  border: 2px solid var(--main-color);
-  background-color: var(--bg-color);
-  box-shadow: 4px 4px var(--main-color);
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--font-color);
-  padding: 8px 10px;
-  outline: none;
-  box-sizing: border-box;
-}
+      {loadingPopup && (
+        <div className="loading-overlay">
+          <div className="loading-box">
+            <div className="spinner" />
+            {loadingText}
+          </div>
+        </div>
+      )}
 
-.flip-card__input::placeholder { color: var(--font-color-sub); opacity: 0.85; }
-.flip-card__input:focus { border: 2px solid var(--input-focus); }
+      <div className="page-header">
+        <h1 className="page-title">♠SPADES♠</h1>
 
-textarea.flip-card__input {
-  height: 90px !important;
-  resize: none;
-}
-
-.flip-card__btn {
-  margin: 10px 0 0;
-  width: min(220px, 100%);
-  height: 44px;
-  border-radius: 8px;
-  border: 2px solid var(--main-color);
-  background-color: var(--bg-color);
-  box-shadow: 4px 4px var(--main-color);
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--font-color);
-  cursor: pointer;
-}
-
-.flip-card__btn:active {
-  box-shadow: 0px 0px var(--main-color);
-  transform: translate(3px, 3px);
-}
-  .loading-overlay{
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  backdrop-filter: blur(2px);
-}
-
-.loading-box{
-  background: rgba(255,255,255,0.92);
-  border: 2px solid var(--main-color);
-  box-shadow: 4px 4px var(--main-color);
-  border-radius: 12px;
-  padding: 18px 18px;
-  width: min(320px, 90vw);
-  text-align: center;
-  font-weight: 800;
-  color: #222;
-}
-
-.spinner{
-  width: 28px;
-  height: 28px;
-  border: 3px solid rgba(0,0,0,0.2);
-  border-top-color: rgba(0,0,0,0.8);
-  border-radius: 50%;
-  margin: 0 auto 10px;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin{
-  to { transform: rotate(360deg); }
-}
-
-.helper {
-  width: min(320px, 100%);
-  font-size: 12px;
-  color: #333;
-  opacity: 0.85;
-  text-align: left;
-  box-sizing: border-box;
-  margin-top: -6px;
-}
-`}</style>
-
-{loadingPopup && (
-  <div className="loading-overlay">
-    <div className="loading-box">
-      <div className="spinner" />
-      {loadingText}
-    </div>
-  </div>
-)}
-
-<div className="page-header">
-  <h1 className="page-title">♠SPADES♠</h1>
-
-  <p className="page-sub">
-    This is a student project. You’re welcome to support me and send some money if you want
-    (<a href="BIT_LINK_HERE" target="_blank" rel="noreferrer">bit link here</a>).
-    <br />
-    If you want anything improved, you’re welcome to write to me at{" "}
-    <a href="mailto:yanazlatin.work@gmail.com">yanazlatin.work@gmail.com</a>
-  </p>
-</div>
+        <p className="page-sub">
+          This is a student project. You’re welcome to support me and send some money if you want (
+          <a href="BIT_LINK_HERE" target="_blank" rel="noreferrer">
+            bit link here
+          </a>
+          ).
+          <br />
+          If you want anything improved, you’re welcome to write to me at{" "}
+          <a href="mailto:yanazlatin.work@gmail.com">yanazlatin.work@gmail.com</a>
+        </p>
+      </div>
 
       <div className="wrapper">
         <div className="card-switch">
@@ -603,74 +579,87 @@ textarea.flip-card__input {
                     <option value="polyamory-romance">polyamory romance</option>
                   </select>
 
+                  {/* ✅ Preference (single choice). "Doesn't matter" => "" */}
+                  <select
+                    className="flip-card__input"
+                    value={signupPreference}
+                    onChange={(e) => setSignupPreference(e.target.value)}
+                  >
+                    <option value="">Preference (what gender can see you)</option>
+                    <option value="woman">woman</option>
+                    <option value="man">man</option>
+                    <option value="non-binary">non-binary</option>
+                    <option value="other">other</option>
+                    <option value="">doesnt matter</option>
+                  </select>
+
+                  <div className="helper">
+                    This controls who will see you in their results. Leave as “doesn’t matter” to allow everyone.
+                  </div>
+
                   <div className="helper" style={{ marginTop: 2, fontWeight: 800 }}>
-  Profile image
-</div>
+                    Profile image
+                  </div>
 
-<div
-  style={{
-    width: "min(320px, 100%)",
-    display: "flex",
-    gap: 10,
-    alignItems: "center",
-    justifyContent: "space-between",
-  }}
->
-  <div
-    style={{
-      width: 54,
-      height: 54,
-      borderRadius: 14,
-      overflow: "hidden",
-      border: "2px solid var(--main-color)",
-      background: "#f1f5f9",
-      boxShadow: "4px 4px var(--main-color)",
-      flex: "0 0 auto",
-      display: "grid",
-      placeItems: "center",
-      fontWeight: 900,
-    }}
-  >
-    {signupAvatarPreview ? (
-  <img
-    src={signupAvatarPreview}
-    alt="preview"
-    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-  />
-) : (
-  <span style={{ fontSize: 11, fontWeight: 800, opacity: 0.8, lineHeight: 1.1 }}>
-    add profile image
-  </span>
-)}
-  </div>
+                  <div
+                    style={{
+                      width: "min(320px, 100%)",
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 54,
+                        height: 54,
+                        borderRadius: 14,
+                        overflow: "hidden",
+                        border: "2px solid var(--main-color)",
+                        background: "#f1f5f9",
+                        boxShadow: "4px 4px var(--main-color)",
+                        flex: "0 0 auto",
+                        display: "grid",
+                        placeItems: "center",
+                        fontWeight: 900,
+                      }}
+                    >
+                      {signupAvatarPreview ? (
+                        <img
+                          src={signupAvatarPreview}
+                          alt="preview"
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: 11, fontWeight: 800, opacity: 0.8, lineHeight: 1.1 }}>
+                          add profile image
+                        </span>
+                      )}
+                    </div>
 
-  <input
-    className="flip-card__input"
-    style={{ margin: 0 }}
-    type="file"
-    accept="image/*"
-    onChange={(e) => {
-      const f = e.target.files?.[0] || null;
-      setSignupAvatarFile(f);
-      if (f) {
-        const url = URL.createObjectURL(f);
-        setSignupAvatarPreview(url);
-      } else {
-        setSignupAvatarPreview(null);
-      }
-    }}
-  />
-</div>
+                    <input
+                      className="flip-card__input"
+                      style={{ margin: 0 }}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] || null;
+                        setSignupAvatarFile(f);
+                        if (f) {
+                          const url = URL.createObjectURL(f);
+                          setSignupAvatarPreview(url);
+                        } else {
+                          setSignupAvatarPreview(null);
+                        }
+                      }}
+                    />
+                  </div>
 
-<div className="helper">
-  {signupAvatarFile ? `Selected: ${signupAvatarFile.name}` : "Optional: choose an image to upload"}
-  {uploadingAvatar ? " • Uploading…" : ""}
-</div>
                   <div className="helper">
                     {signupAvatarFile ? `Selected: ${signupAvatarFile.name}` : "Optional: choose an image to upload"}
                     {uploadingAvatar ? " • Uploading…" : ""}
                   </div>
-
 
                   <select
                     className="flip-card__input"

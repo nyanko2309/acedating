@@ -11,6 +11,7 @@ export default function TopBar({
     { to: "/saved", label: "Saved" },
     { to: "/random", label: "Let luck choose" },
     { to: "/latters", label: "Letters" },
+    { to: "/Infopage", label: "Info and contacts" },
   ],
   showLogout = true,
 }) {

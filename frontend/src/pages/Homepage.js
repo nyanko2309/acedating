@@ -426,6 +426,7 @@ return (
     { to: "/saved", label: "Saved" },
     { to: "/random", label: "Let luck choose" },
     { to: "/latters", label: "Inbox" },
+    { to: "/info", label: "Info & Contact" },
   ]}
   />
 

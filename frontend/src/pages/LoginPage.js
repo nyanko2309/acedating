@@ -111,8 +111,7 @@ function LoginPage() {
         age: Number(signupAge),
         orientation: signupOrientation,
         looking_for: signupLookingFor,
-        preference: signupPreference, // ✅ NEW
-        image_url: finalImageUrl,
+        Spreference: signupPreference === "any" ? "" : signupPreference,        image_url: finalImageUrl,
         city: signupCity,
         gender: signupGender,
         info: signupInfo,
@@ -622,7 +621,7 @@ function LoginPage() {
                     <option value="man">man</option>
                     <option value="non-binary">non-binary</option>
                     <option value="other">other</option>
-                    <option value="">doesnt matter</option>
+                    <option value="any">doesnt matter</option>
                   </select>
 
                   <div className="helper">

@@ -305,24 +305,7 @@ msWrap: {
     zIndex: 9999,
     padding: 18,
   },
-  modal: {
-    width: "min(960px, 96vw)",
-    maxHeight: "90vh",
-    background: "rgba(255,255,255,0.92)",
-    borderRadius: 18,
-    overflowY: "auto",
-    boxShadow: "0 30px 120px rgba(0,0,0,0.35)",
-    border: "1px solid rgba(255,255,255,0.14)",
-   // backdropFilter: "blur(10px)",
-  },
-  modalTop: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "12px 14px",
-    background: "rgba(12, 8, 20, 0.92)",
-    color: "white",
-  },
+
   modalTitle: { fontWeight: 900, fontSize: 13, opacity: 0.95 },
   modalClose: {
     border: "1px solid rgba(255,255,255,0.25)",
@@ -335,19 +318,51 @@ msWrap: {
     fontSize: 18,
     lineHeight: "36px",
   },
-  modalBody: { background: "rgba(12, 8, 20, 0.92)" },
-  modalImgWrap: {
-    width: "100%",
-    height: "min(72vh, 720px)",
-    display: "grid",
-    placeItems: "center",
-  },
-  modalImg: {
-    maxWidth: "100%",
-    maxHeight: "100%",
-    objectFit: "contain",
-    display: "block",
-  },
+  // ===== Lightbox sizing so image ALWAYS fits =====
+modal: {
+  width: "min(900px, 92vw)",
+  maxHeight: "85vh",
+  background: "rgba(37, 28, 40, 0.96)",
+  borderRadius: 14,
+  overflow: "hidden",
+  display: "flex",
+  flexDirection: "column",
+  border: "1px solid rgba(255,255,255,0.14)",
+},
+
+modalTop: {
+  flex: "0 0 auto",
+  padding: "10px 12px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+},
+
+modalBody: {
+  flex: "1 1 auto",
+  minHeight: 0,        // ⭐ CRITICAL so the body can shrink inside the modal
+  padding: 12,
+  overflow: "auto",  // ⭐ prevent scroll; we want the image to fit instead
+},
+
+modalImgWrap: {
+  width: "100%",
+  height: "100%",      // fill modalBody
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+modalImg: {
+  maxWidth: "70%",
+  maxHeight: "70%",
+  width: "auto",
+  height: "auto",
+  objectFit: "contain",
+  borderRadius: 12,
+  display: "block",
+},
 
   cardTop: {
     display: "flex",

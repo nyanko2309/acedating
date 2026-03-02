@@ -491,9 +491,14 @@ function LoginPage() {
 
         <p className="page-sub">
           This is a student project. You’re welcome to support me and send some money if you want (
-          <a href="BIT_LINK_HERE" target="_blank" rel="noreferrer">
-            bit link here
-          </a>
+<a
+  href="https://www.bitpay.co.il/app/me/5B084B7C-5DD9-17A9-2656-4AFB88B5A9EBF7B5"
+  target="_blank"
+  rel="noreferrer"
+>
+  Support via Bit 💚
+</a>           
+          
           ).
           <br />
           If you want anything improved, you’re welcome to write to me at{" "}

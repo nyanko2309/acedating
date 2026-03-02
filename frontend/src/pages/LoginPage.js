@@ -111,7 +111,7 @@ function LoginPage() {
         age: Number(signupAge),
         orientation: signupOrientation,
         looking_for: signupLookingFor,
-        Spreference: signupPreference === "any" ? "" : signupPreference,        image_url: finalImageUrl,
+        preference: signupPreference === "any" ? "" : signupPreference,        image_url: finalImageUrl,
         city: signupCity,
         gender: signupGender,
         info: signupInfo,

@@ -11,7 +11,7 @@ const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 const PAGE_SIZE = 24;
 const ORIENTATION_OPTIONS = ["Ace", "Aro", "Aroace", "Demi", "Grey-asexual"];
 const LOOKING_FOR_OPTIONS = ["Friendship", "Monogamy-romance", "Qpr", "Polyamory-romance"];
-const GENDER_OPTIONS = ["man", "woman", "Non-binary", "Other"];
+const GENDER_OPTIONS = ["Man", "Woman", "Non-binary", "Other"];
 const CITY_OPTIONS = [
   { value: "gush-dan", label: "Gush Dan (Tel Aviv / Ramat Gan / Holon / Bat Yam...)" },
   { value: "jerusalem-area", label: "Jerusalem area" },

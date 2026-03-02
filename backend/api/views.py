@@ -356,35 +356,87 @@ class CloudinaryDeleteView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+from datetime import datetime
+from bson import ObjectId
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+from .mongo import get_db
+
+def oid(x):
+    if isinstance(x, ObjectId):
+        return x
+    if isinstance(x, str) and ObjectId.is_valid(x.strip()):
+        return ObjectId(x.strip())
+    return None
+
 class LikesView(APIView):
-    # GET /api/likes/<user_id> -> {"liked": ["id1","id2",...]}
-    def get(self, request, user_id):
-        try:
-            liked_ids = dbcommands.get_user_liked(user_id)
-            liked_ids = [str(x) for x in (liked_ids or [])]
-            return Response({"liked": liked_ids}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # GET /api/likes/<user_id>
+    def get(self, request, user_id, profile_id=None):
+        db = get_db()
+        users = db["users"]
 
-    # POST /api/likes/<user_id>/<profile_id> -> like
+        uid = oid(user_id)
+        if not uid:
+            return Response({"liked": []}, status=status.HTTP_200_OK)
+
+        me = users.find_one({"_id": uid}, {"liked": 1})
+        liked_raw = (me or {}).get("liked", [])
+
+        # return as strings
+        liked = []
+        for x in liked_raw:
+            if isinstance(x, ObjectId):
+                liked.append(str(x))
+            else:
+                o = oid(x)
+                if o:
+                    liked.append(str(o))
+
+        return Response({"liked": liked}, status=status.HTTP_200_OK)
+
+    # POST /api/likes/<user_id>/<profile_id>
     def post(self, request, user_id, profile_id):
-        try:
-            ok = dbcommands.add_liked_profile(user_id, profile_id)
-            if not ok:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-            return Response({"ok": True}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        db = get_db()
+        users = db["users"]
 
-    # DELETE /api/likes/<user_id>/<profile_id> -> unlike
+        uid = oid(user_id)
+        pid = oid(profile_id)
+
+        if not uid or not pid:
+            return Response({"error": "Invalid id"}, status=status.HTTP_400_BAD_REQUEST)
+        if uid == pid:
+            return Response({"error": "Cannot like yourself"}, status=status.HTTP_400_BAD_REQUEST)
+
+        res = users.update_one(
+            {"_id": uid},
+            {"$addToSet": {"liked": pid}, "$set": {"updated_at": datetime.utcnow()}},
+        )
+        if res.matched_count == 0:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({"ok": True}, status=status.HTTP_200_OK)
+
+    # DELETE /api/likes/<user_id>/<profile_id>
     def delete(self, request, user_id, profile_id):
-        try:
-            ok = dbcommands.remove_liked_profile(user_id, profile_id)
-            if not ok:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-            return Response({"ok": True}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        db = get_db()
+        users = db["users"]
+
+        uid = oid(user_id)
+        pid = oid(profile_id)
+
+        if not uid or not pid:
+            return Response({"error": "Invalid id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        res = users.update_one(
+            {"_id": uid},
+            {"$pull": {"liked": pid}, "$set": {"updated_at": datetime.utcnow()}},
+        )
+        if res.matched_count == 0:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({"ok": True}, status=status.HTTP_200_OK)
             
 class WriteLatterView(APIView):
     """

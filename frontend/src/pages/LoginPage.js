@@ -118,7 +118,7 @@ function LoginPage() {
         contact: signupContact,
       };
 
-      await axios.post(BASE_URL_SignUp, payload, { timeout: 15000 });
+      await axios.post(BASE_URL_SignUp, payload, { timeout: 60000 });
 
       setLoadingText("Logging you in…");
       const loginRes = await axios.post(
@@ -132,7 +132,7 @@ function LoginPage() {
 
       setLoadingText("Opening home…");
       window.location.assign("/home");
-      setTimeout(() => setLoadingPopup(false), 6000);
+      setTimeout(() => setLoadingPopup(false), 60000);
     } catch (err) {
       setLoadingPopup(false);
       setUploadingAvatar(false);

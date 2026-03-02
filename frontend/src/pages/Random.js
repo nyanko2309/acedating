@@ -11,7 +11,7 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
   const navigate = useNavigate();
   const [imgOk, setImgOk] = useState(true);
 
-  const fallback = `${PLACEHOLDER_AVATAR_URL}&seed=${encodeURIComponent(p.username || "ace")}`;
+  const fallback = `${PLACEHOLDER_AVATAR_URL}&seed=${encodeURIComponent(p.username || "Ace")}`;
   const imgSrc = imgOk && p.image_url ? p.image_url : fallback;
 
   return (
@@ -50,7 +50,7 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
 
       <div style={{ display: "flex", gap: 10, padding: "0 14px 14px" }}>
         <button type="button" style={S.secondaryBtn} onClick={() => navigate(`/writelatter/${p._id}`)}>
-          Write latter
+          Write a massage
         </button>
       </div>
 

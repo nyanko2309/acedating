@@ -9,9 +9,9 @@ import { S, ensureHomepageStyles, PLACEHOLDER_AVATAR_URL } from "./homepageStyle
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 const PAGE_SIZE = 24;
-const ORIENTATION_OPTIONS = ["ace", "aro", "aroace", "demi", "grey-asexual"];
-const LOOKING_FOR_OPTIONS = ["friendship", "monogamy-romance", "qpr", "polyamory-romance"];
-const GENDER_OPTIONS = ["man", "woman", "non-binary", "other"];
+const ORIENTATION_OPTIONS = ["Ace", "Aro", "Aroace", "Demi", "Grey-asexual"];
+const LOOKING_FOR_OPTIONS = ["Friendship", "Monogamy-romance", "Qpr", "Polyamory-romance"];
+const GENDER_OPTIONS = ["man", "woman", "Non-binary", "Other"];
 const CITY_OPTIONS = [
   { value: "gush-dan", label: "Gush Dan (Tel Aviv / Ramat Gan / Holon / Bat Yam...)" },
   { value: "jerusalem-area", label: "Jerusalem area" },
@@ -123,7 +123,7 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
   const navigate = useNavigate();
 
   const [imgOk, setImgOk] = useState(true);
-  const fallback = `${PLACEHOLDER_AVATAR_URL}&seed=${encodeURIComponent(p.username || "ace")}`;
+  const fallback = `${PLACEHOLDER_AVATAR_URL}&seed=${encodeURIComponent(p.username || "Ace")}`;
   const imgSrc = imgOk && p.image_url ? p.image_url : fallback;
 
   return (
@@ -165,7 +165,7 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
       style={S.secondaryBtn}
       onClick={() => navigate(`/writelatter/${p._id}`)}
         >
-        Write latter
+        Write a massage
       </button>
       </div>
 

@@ -475,6 +475,14 @@ function LoginPage() {
     box-sizing: border-box;
     margin-top: -6px;
   }
+    .notice {
+  width: min(320px, 100%);
+  margin: -4px auto 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #b91c1c;            /* muted red */
+  text-align: center;
+}
 `}</style>
 
       {loadingPopup && (
@@ -517,7 +525,10 @@ function LoginPage() {
               {/* FRONT = LOGIN */}
               <div className="flip-card__front">
                 <div className="title">Log in</div>
-
+                <div className="title">Log in</div>
+                <div className="notice">
+                  ⚠ Login and Sign-up may take a few tries — the server can be slow.
+                </div>
                 <form className="flip-card__form" onSubmit={handleLogin}>
                   <input
                     className="flip-card__input"
@@ -595,11 +606,11 @@ function LoginPage() {
                     required
                   >
                     <option value="">Orientation</option>
-                    <option value="ace">ace</option>
-                    <option value="aro">aro</option>
-                    <option value="aroace">aroace</option>
-                    <option value="demi">demi</option>
-                    <option value="grey-asexual">grey-asexual</option>
+                    <option value="Ace">ace</option>
+                    <option value="Aro">aro</option>
+                    <option value="Aroace">aroace</option>
+                    <option value="Demi">demi</option>
+                    <option value="Grey-asexual">grey-asexual</option>
                   </select>
 
                   <select
@@ -609,10 +620,10 @@ function LoginPage() {
                     required
                   >
                     <option value="">Looking for</option>
-                    <option value="friendship">friendship</option>
-                    <option value="monogamy-romance">monogamy romance</option>
-                    <option value="qpr">QPR</option>
-                    <option value="polyamory-romance">polyamory romance</option>
+                    <option value="Friendship">Friendship</option>
+                    <option value="Monogamy-romance">monogamy romance</option>
+                    <option value="Qpr">QPR</option>
+                    <option value="Polyamory-romance">polyamory romance</option>
                   </select>
 
                   {/* ✅ Preference (single choice). "Doesn't matter" => "" */}

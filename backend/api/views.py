@@ -227,7 +227,7 @@ class ProfilesListView(APIView):
 
         # ---------- preference filter ----------
         # If viewer has gender, only return profiles that prefer that gender OR have empty/no preference
-        if viewer_gender in {"woman", "man", "non-binary", "other"}:
+        if viewer_gender in {"Woman", "Man", "Non-binary", "Other"}:
             q["$or"] = [
                 {"preference": viewer_gender},
                 {"preference": ""},

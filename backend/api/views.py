@@ -583,3 +583,8 @@ class DeleteLetterView(APIView):
 
         letters.delete_one({"_id": lid})
         return Response({"ok": True}, status=200)
+
+from django.http import JsonResponse
+
+def health(request):
+    return JsonResponse({"ok": True})

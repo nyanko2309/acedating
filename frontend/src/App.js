@@ -1,5 +1,5 @@
 import React from "react";
-
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 
@@ -17,9 +17,10 @@ import Infopage from "./pages/Infopage";
 function App() {
   
   return (
-
+ <>
 <Router>
   {/* Check this current conflict when merging with the main */}
+ 
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/home" element={<Homepage />} /> 
@@ -31,7 +32,8 @@ function App() {
         <Route path="/writelatter/:profile_id" element={<WriteLatter />} />
       </Routes>
 </Router>
-    
+      <SpeedInsights />
+    </>
   );
 }
 

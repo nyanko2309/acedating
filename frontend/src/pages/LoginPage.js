@@ -73,8 +73,8 @@ function LoginPage() {
       if (res.data.token) localStorage.setItem("token", res.data.token);
 
       setLoadingText("Opening home…");
-      window.location.assign("/home");
-      setTimeout(() => setLoadingPopup(false), 6000);
+      window.location.assign("/info");
+      setTimeout(() => setLoadingPopup(false), 120000);
     } catch (err) {
       setLoadingPopup(false);
       const errorMsg =
@@ -118,7 +118,7 @@ function LoginPage() {
         contact: signupContact,
       };
 
-      await axios.post(BASE_URL_SignUp, payload, { timeout: 60000 });
+      await axios.post(BASE_URL_SignUp, payload, { timeout: 120000 });
 
       setLoadingText("Logging you in…");
       const loginRes = await axios.post(
@@ -131,8 +131,8 @@ function LoginPage() {
       if (loginRes.data.token) localStorage.setItem("token", loginRes.data.token);
 
       setLoadingText("Opening home…");
-      window.location.assign("/home");
-      setTimeout(() => setLoadingPopup(false), 60000);
+      window.location.assign("/info");
+      setTimeout(() => setLoadingPopup(false), 120000);
     } catch (err) {
       setLoadingPopup(false);
       setUploadingAvatar(false);

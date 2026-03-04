@@ -17,7 +17,6 @@ import cloudinary
 # Helpers
 # ----------------------------
 def oid(x):
-    """Safe ObjectId converter for ids coming as strings."""
     if isinstance(x, ObjectId):
         return x
     if isinstance(x, str) and ObjectId.is_valid(x.strip()):
@@ -46,6 +45,7 @@ def serialize_letter(doc):
         "read_at": s_dt(doc.get("read_at")),
     }
 
+
 def serialize_mongo(doc):
     if doc is None:
         return None
@@ -71,10 +71,12 @@ PROFILE_ALLOWED_FIELDS = {
     "city",
     "gender",
     "orientation",
+    "romantic_orientation",  # ✅ NEW
     "looking_for",
     "info",
     "contact",
     "image_url",
+    "image_public_id",       # (you already use it in ProfilePage payload)
 }
 
 
@@ -84,7 +86,11 @@ PROFILE_ALLOWED_FIELDS = {
 class SignUpView(APIView):
     """
     POST /api/signup
-    Body: { username, password, name, age, orientation, looking_for, image_url, city, gender, info, contact, preference }
+    Body: {
+      username, password, name, age,
+      orientation, romantic_orientation,
+      looking_for, image_url, city, gender, info, contact, preference
+    }
     Creates user and returns token + user_id.
     """
 
@@ -110,6 +116,9 @@ class SignUpView(APIView):
         # ✅ default preference to empty string
         preference = (data.get("preference") or "").strip()
 
+        # ✅ NEW: romantic orientation default to empty string
+        romantic_orientation = (data.get("romantic_orientation") or "").strip()
+
         now = datetime.utcnow()
         token = str(uuid4())
 
@@ -122,10 +131,14 @@ class SignUpView(APIView):
 
             "name": (data.get("name") or "").strip() or None,
             "age": age,
-            "preference": preference,  # ✅ fixed
-            "orientation": data.get("orientation"),
-            "looking_for": data.get("looking_for"),
+            "preference": preference,
+
+            "orientation": (data.get("orientation") or "").strip() or None,
+            "romantic_orientation": romantic_orientation,  # ✅ NEW
+
+            "looking_for": (data.get("looking_for") or "").strip() or None,
             "image_url": data.get("image_url"),
+            "image_public_id": data.get("image_public_id"),  # optional if you ever send it on signup
             "city": data.get("city"),
             "gender": data.get("gender"),
             "info": data.get("info"),
@@ -139,6 +152,7 @@ class SignUpView(APIView):
             {"message": "Signup successful", "token": token, "user_id": str(user_id)},
             status=status.HTTP_201_CREATED,
         )
+
 
 class LoginView(APIView):
     """
@@ -184,7 +198,6 @@ class PingView(APIView):
 
 # ----------------------------
 # Profiles list (feed) - now from users
-# OPTION B: exclude 'liked' so ObjectIds in the list never reach JSON renderer
 # ----------------------------
 class ProfilesListView(APIView):
     def get(self, request):
@@ -222,11 +235,9 @@ class ProfilesListView(APIView):
             if isinstance(q["_id"], dict):
                 q["_id"]["$ne"] = viewer_oid
             else:
-                # in case you ever change _id filter structure
                 q["_id"] = {"$ne": viewer_oid}
 
         # ---------- preference filter ----------
-        # If viewer has gender, only return profiles that prefer that gender OR have empty/no preference
         if viewer_gender in {"Woman", "Man", "Non-binary", "Other"}:
             q["$or"] = [
                 {"preference": viewer_gender},
@@ -285,7 +296,6 @@ class ProfilessavedListView(APIView):
         if not liked_ids:
             return Response({"items": []}, status=200)
 
-        # IMPORTANT: exclude liked here too (otherwise same crash)
         docs = list(
             users.find(
                 {"_id": {"$in": liked_ids}},
@@ -307,7 +317,6 @@ class ProfileView(APIView):
         if not uid:
             return Response({"error": "Invalid user id"}, status=400)
 
-        # exclude liked to be safe (optional, but prevents same serialization issue)
         doc = users.find_one({"_id": uid}, {"password_hash": 0, "session_token": 0, "liked": 0})
         if not doc:
             return Response({"error": "Profile not found"}, status=404)
@@ -335,10 +344,18 @@ class ProfileView(APIView):
             except Exception:
                 return Response({"error": "Age must be a number"}, status=400)
 
+        # normalize preference like signup: allow "any" to become ""
+        if "preference" in update_fields and update_fields["preference"] is not None:
+            pref = str(update_fields["preference"]).strip()
+            update_fields["preference"] = "" if pref == "any" else pref
+
+        # ✅ NEW: normalize romantic orientation (ensure it's string)
+        if "romantic_orientation" in update_fields and update_fields["romantic_orientation"] is not None:
+            update_fields["romantic_orientation"] = str(update_fields["romantic_orientation"]).strip()
+
         update_fields["updated_at"] = datetime.utcnow()
         users.update_one({"_id": uid}, {"$set": update_fields})
 
-        # exclude liked to prevent serialization issue
         doc = users.find_one({"_id": uid}, {"password_hash": 0, "session_token": 0, "liked": 0})
         return Response(serialize_mongo(doc), status=200)
 
@@ -355,7 +372,7 @@ class CloudinaryDeleteView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
+#==========================================================================Likes
 from datetime import datetime
 from bson import ObjectId
 from rest_framework.views import APIView
@@ -364,12 +381,6 @@ from rest_framework import status
 
 from .mongo import get_db
 
-def oid(x):
-    if isinstance(x, ObjectId):
-        return x
-    if isinstance(x, str) and ObjectId.is_valid(x.strip()):
-        return ObjectId(x.strip())
-    return None
 
 class LikesView(APIView):
     # GET /api/likes/<user_id>
@@ -437,7 +448,7 @@ class LikesView(APIView):
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
         return Response({"ok": True}, status=status.HTTP_200_OK)
-            
+#======================================================================================Latters            
 class WriteLatterView(APIView):
     """
     POST /api/writelatter/<user_id>/<profile_id>

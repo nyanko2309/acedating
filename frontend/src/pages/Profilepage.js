@@ -1,8 +1,67 @@
+// ProfilePage.js
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import TopBar from "./TopBar";
+import { S } from "./Profilepagestyles";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
+
+/** ===== options ===== */
+const ORIENTATION_OPTIONS = ["Ace", "Aro", "Aroace", "Demi", "Grey-asexual"];
+
+const ROMANTIC_ORIENTATION_OPTIONS = [
+  "Aromantic",
+  "Demiromantic",
+  "Grey-romantic",
+  "Heteroromantic",
+  "Homoromantic",
+  "Biromantic",
+  "Panromantic",
+  "Queerromantic",
+  "Questioning",
+  "Other",
+];
+
+const LOOKING_FOR_OPTIONS = ["Friendship", "Monogamy-romance", "Qpr", "Polyamory-romance"];
+
+const GENDER_OPTIONS = ["Man", "Woman", "Non-binary", "Other"];
+
+const CITY_OPTIONS = [
+  { value: "gush-dan", label: "Gush Dan (Tel Aviv / Ramat Gan / Holon / Bat Yam...)" },
+  { value: "jerusalem-area", label: "Jerusalem area" },
+  { value: "hasharon", label: "HaSharon (Herzliya / Raanana / Kfar Saba / Netanya)" },
+  { value: "shfela", label: "HaShfela (Rishon / Rehovot / Ramla / Lod)" },
+  { value: "haifa-krayot", label: "Haifa & Krayot" },
+  { value: "north-galilee-golan", label: "North (Galilee / Golan)" },
+  { value: "south-coast", label: "South coast (Ashdod / Ashkelon)" },
+  { value: "negev-beer-sheva", label: "Negev (Beer Sheva area)" },
+  { value: "eilat-arava", label: "Eilat / Arava" },
+  { value: "other-israel", label: "Other / Not sure" },
+];
+
+const PREFERENCE_OPTIONS = [
+  { value: "woman", label: "woman" },
+  { value: "man", label: "man" },
+  { value: "non-binary", label: "non-binary" },
+  { value: "other", label: "other" },
+  { value: "any", label: "doesn't matter" },
+];
+
+const AGE_OPTIONS = Array.from({ length: 83 }, (_, i) => {
+  const n = i + 18;
+  return { value: String(n), label: String(n) };
+});
+
+function normalizeOptions(options) {
+  return (options || []).map((o) => (typeof o === "string" ? { value: o, label: o } : o));
+}
+
+function labelFromOptions(options, value) {
+  if (value === null || value === undefined || value === "") return "";
+  const opts = normalizeOptions(options);
+  const found = opts.find((o) => String(o.value) === String(value));
+  return found?.label ?? String(value);
+}
 
 export default function ProfilePage() {
   const userId = useMemo(() => localStorage.getItem("user_id"), []);
@@ -25,14 +84,15 @@ export default function ProfilePage() {
   // editable fields
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
-  const [age, setAge] = useState("");
+  const [age, setAge] = useState(""); // string for select
   const [city, setCity] = useState("");
   const [gender, setGender] = useState("");
   const [orientation, setOrientation] = useState("");
+  const [romanticOrientation, setRomanticOrientation] = useState(""); // ✅ NEW
   const [lookingFor, setLookingFor] = useState("");
-  const [preference, setPreference] = useState(""); // ✅ NEW
+  const [preference, setPreference] = useState("");
   const [info, setInfo] = useState("");
-  const [contact, setContact] = useState("");
+  const [contact, setContact] = useState(""); // ✅ free text
 
   // store both url + public_id so we can delete old image later
   const [imageUrl, setImageUrl] = useState("");
@@ -88,12 +148,13 @@ export default function ProfilePage() {
 
         setUsername(p?.username || "");
         setName(p?.name || "");
-        setAge(p?.age ?? "");
+        setAge(p?.age === null || p?.age === undefined ? "" : String(p.age));
         setCity(p?.city || "");
         setGender(p?.gender || "");
         setOrientation(p?.orientation || "");
+        setRomanticOrientation(p?.romantic_orientation || ""); // ✅ NEW
         setLookingFor(p?.looking_for || "");
-        setPreference(p?.preference || ""); // ✅ NEW
+        setPreference(p?.preference || "");
         setInfo(p?.info || "");
         setContact(p?.contact || "");
 
@@ -119,12 +180,13 @@ export default function ProfilePage() {
 
     setUsername(profile?.username || "");
     setName(profile?.name || "");
-    setAge(profile?.age ?? "");
+    setAge(profile?.age === null || profile?.age === undefined ? "" : String(profile.age));
     setCity(profile?.city || "");
     setGender(profile?.gender || "");
     setOrientation(profile?.orientation || "");
+    setRomanticOrientation(profile?.romantic_orientation || ""); // ✅ NEW
     setLookingFor(profile?.looking_for || "");
-    setPreference(profile?.preference || ""); // ✅ NEW
+    setPreference(profile?.preference || "");
     setInfo(profile?.info || "");
     setContact(profile?.contact || "");
 
@@ -143,7 +205,6 @@ export default function ProfilePage() {
       let finalUrl = imageUrl || "";
       let finalPublicId = imagePublicId || "";
 
-      // if file selected, upload and override imageUrl/publicId
       if (avatarFile) {
         setUploadingAvatar(true);
         const up = await uploadAvatarToCloudinary(avatarFile);
@@ -152,7 +213,6 @@ export default function ProfilePage() {
         setUploadingAvatar(false);
       }
 
-      // save new profile data in DB (including public_id)
       const payload = {
         username,
         name,
@@ -160,8 +220,9 @@ export default function ProfilePage() {
         city,
         gender,
         orientation,
+        romantic_orientation: romanticOrientation, // ✅ NEW
         looking_for: lookingFor,
-        preference, // ✅ NEW
+        preference: preference === "any" ? "" : preference,
         info,
         contact,
         image_url: finalUrl,
@@ -177,7 +238,6 @@ export default function ProfilePage() {
       setImageUrl(res.data?.image_url || finalUrl);
       setImagePublicId(res.data?.image_public_id || finalPublicId);
 
-      // delete old image from cloud (server-side)
       const changed = oldPublicId && oldPublicId !== finalPublicId;
       if (changed) {
         await axios.post(`${API_BASE}/api/cloudinary/delete`, { public_id: oldPublicId }, { headers });
@@ -273,18 +333,54 @@ export default function ProfilePage() {
               </div>
 
               <div style={S.formCol}>
+                {/* keep username+name as text */}
                 <Field label="Username" value={username} setValue={setUsername} edit={edit} />
                 <Field label="Name" value={name} setValue={setName} edit={edit} />
-                <Field label="Age" value={age} setValue={setAge} edit={edit} type="number" />
-                <Field label="City / Area" value={city} setValue={setCity} edit={edit} />
-                <Field label="Gender" value={gender} setValue={setGender} edit={edit} />
-                <Field label="Orientation" value={orientation} setValue={setOrientation} edit={edit} />
-                <Field label="Looking for" value={lookingFor} setValue={setLookingFor} edit={edit} />
 
-                {/* ✅ NEW FIELD */}
-                <TextField label="Preference" value={preference} setValue={setPreference} edit={edit} maxLength={400} />
+                {/* dropdowns */}
+                <SelectField label="Age" value={age} setValue={setAge} edit={edit} options={AGE_OPTIONS} />
+                <SelectField label="City / Area" value={city} setValue={setCity} edit={edit} options={CITY_OPTIONS} />
+                <SelectField label="Gender" value={gender} setValue={setGender} edit={edit} options={GENDER_OPTIONS} />
 
+                <SelectField
+                  label="Sexual orientation"
+                  value={orientation}
+                  setValue={setOrientation}
+                  edit={edit}
+                  options={ORIENTATION_OPTIONS}
+                />
+
+                {/* ✅ NEW */}
+                <SelectField
+                  label="Romantic orientation"
+                  value={romanticOrientation}
+                  setValue={setRomanticOrientation}
+                  edit={edit}
+                  options={ROMANTIC_ORIENTATION_OPTIONS}
+                  placeholder="Romantic orientation"
+                />
+
+                <SelectField
+                  label="Looking for"
+                  value={lookingFor}
+                  setValue={setLookingFor}
+                  edit={edit}
+                  options={LOOKING_FOR_OPTIONS}
+                />
+
+                <SelectField
+                  label="Preference (what gender can see you)"
+                  value={preference}
+                  setValue={setPreference}
+                  edit={edit}
+                  options={PREFERENCE_OPTIONS}
+                  placeholder="Preference (what gender can see you)"
+                />
+
+                {/* contact is FREE TEXT */}
                 <Field label="Contact" value={contact} setValue={setContact} edit={edit} />
+
+                {/* free text */}
                 <TextField label="Info" value={info} setValue={setInfo} edit={edit} maxLength={1000} />
               </div>
             </div>
@@ -303,6 +399,29 @@ function Field({ label, value, setValue, edit, type = "text" }) {
         <div style={S.value}>{value || "—"}</div>
       ) : (
         <input style={S.input} value={value} onChange={(e) => setValue(e.target.value)} type={type} />
+      )}
+    </div>
+  );
+}
+
+function SelectField({ label, value, setValue, edit, options, placeholder }) {
+  const opts = normalizeOptions(options);
+  const display = labelFromOptions(opts, value);
+
+  return (
+    <div style={S.field}>
+      <div style={S.label}>{label}</div>
+      {!edit ? (
+        <div style={S.value}>{display || "—"}</div>
+      ) : (
+        <select style={S.input} value={value ?? ""} onChange={(e) => setValue(e.target.value)}>
+          <option value="">{placeholder || `Select ${label}`}</option>
+          {opts.map((o) => (
+            <option key={String(o.value)} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
       )}
     </div>
   );
@@ -331,152 +450,3 @@ function TextField({ label, value, setValue, edit, maxLength }) {
     </div>
   );
 }
-
-const S = {
-  page: {
-    minHeight: "100vh",
-    color: "rgba(15, 15, 15, 0.92)",
-   background:
-    
-    'url("/bgdesign.png")',
-     backgroundPosition: "center",
-      backgroundRepeat: "no-repeat",
-      backgroundSize: "cover",
-  },
-
-  main: { padding: 16, display: "flex", justifyContent: "center" },
-
-  card: {
-    width: "min(980px, 96vw)",
-    background: "rgba(255,255,255,0.08)",
-    border: "1px solid rgba(255,255,255,0.14)",
-    borderRadius: 20,
-    padding: 18,
-    boxShadow: "0 18px 70px rgba(0,0,0,0.26)",
-    backdropFilter: "blur(12px)",
-  },
-
-  headerRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
-    flexWrap: "wrap",
-  },
-
-  title: { fontSize: 22, fontWeight: 950, color: "rgba(40, 2, 66, 0.92)" },
-  sub: { fontSize: 13, color: "rgba(255,255,255,0.70)", marginTop: 4 },
-
-  error: {
-    marginTop: 12,
-    background: "rgba(255,80,100,0.14)",
-    border: "1px solid rgba(255,80,100,0.30)",
-    color: "rgba(255,220,225,0.95)",
-    padding: "10px 12px",
-    borderRadius: 14,
-    fontWeight: 800,
-    fontSize: 13,
-  },
-
-  loading: { padding: 18, fontWeight: 900, color: "rgba(40, 2, 66, 0.92)" },
-
-  grid: {
-    marginTop: 16,
-    display: "grid",
-    gridTemplateColumns: "300px 1fr",
-    gap: 16,
-  },
-
-  avatarCol: { display: "flex", flexDirection: "column", gap: 10 },
-
-  avatarWrap: {
-    width: "100%",
-    aspectRatio: "1 / 1",
-    borderRadius: 18,
-    overflow: "hidden",
-    border: "1px solid rgba(255,255,255,0.18)",
-    background: "rgba(255,255,255,0.08)",
-    boxShadow: "0 14px 50px rgba(0,0,0,0.22)",
-  },
-
-  avatar: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-
-  formCol: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
-
-  field: { display: "flex", flexDirection: "column", gap: 6 },
-
-  label: { fontSize: 12, fontWeight: 950, color: "rgba(40, 2, 66, 0.92)" },
-
-  value: {
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.16)",
-    borderRadius: 14,
-    padding: "10px 12px",
-    fontWeight: 800,
-    color: "rgba(40, 2, 66, 0.92)",
-  },
-
-  valueMultiline: {
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.16)",
-    borderRadius: 14,
-    padding: "10px 12px",
-    fontWeight: 700,
-    color: "rgba(40, 2, 66, 0.92)",
-    whiteSpace: "pre-wrap",
-    minHeight: 110,
-  },
-
-  input: {
-    width: "100%",
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.18)",
-    borderRadius: 14,
-    padding: "10px 12px",
-    fontWeight: 800,
-    color: "rgba(40, 2, 66, 0.92)",
-    outline: "none",
-    boxSizing: "border-box",
-  },
-
-  textarea: {
-    width: "100%",
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.18)",
-    borderRadius: 14,
-    padding: "10px 12px",
-    fontWeight: 800,
-    color: "rgba(40, 2, 66, 0.92)",
-    outline: "none",
-    resize: "vertical",
-    boxSizing: "border-box",
-    minHeight: 120,
-  },
-
-  hint: { fontSize: 12, color: "rgba(71, 47, 89, 0.65)", marginTop: 4 },
-
-  btn: {
-    height: 40,
-    padding: "0 14px",
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.18)",
-    background:
-      "linear-gradient(135deg, rgba(255,110,199,0.26), rgba(167,139,250,0.20), rgba(125,211,252,0.16))",
-    color: "rgba(40, 2, 66, 0.92)",
-    fontWeight: 950,
-    cursor: "pointer",
-    backdropFilter: "blur(10px)",
-  },
-
-  btnGhost: {
-    height: 40,
-    padding: "0 14px",
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.18)",
-    background: "rgba(255,255,255,0.06)",
-    color: "rgba(40, 2, 66, 0.92)",
-    fontWeight: 950,
-    cursor: "pointer",
-    backdropFilter: "blur(10px)",
-  },
-};

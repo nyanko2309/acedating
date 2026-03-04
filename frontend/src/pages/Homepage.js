@@ -24,6 +24,18 @@ const CITY_OPTIONS = [
   { value: "eilat-arava", label: "Eilat / Arava" },
   { value: "other-israel", label: "Other / Not sure" },
 ];
+const ROMANTIC_ORIENTATION_OPTIONS = [
+  "Aromantic",
+  "Demiromantic",
+  "Grey-romantic",
+  "Heteroromantic",
+  "Homoromantic",
+  "Biromantic",
+  "Panromantic",
+  "Queerromantic",
+  "Questioning",
+  "Other",
+];
 
 function normalizeText(x) {
   return (x ?? "").toString().toLowerCase();
@@ -248,7 +260,7 @@ export default function Homepage() {
   const [orientationSet, setOrientationSet] = useState(() => new Set());
   const [lookingForSet, setLookingForSet] = useState(() => new Set());
   const [genderSet, setGenderSet] = useState(() => new Set());
-
+  const [romanticOrientationSet, setRomanticOrientationSet] = useState(() => new Set());
   // Age range
   const [ageMin, setAgeMin] = useState("");
   const [ageMax, setAgeMax] = useState("");
@@ -345,17 +357,19 @@ useEffect(() => {
       const pLF = (p.looking_for ?? "").toString();
       const pGender = (p.gender ?? "").toString();
       const pAge = Number(p.age);
+      const pRom = (p.romantic_orientation ?? "").toString();
 
       if (citySet.size && !citySet.has(pCity)) return false;
       if (orientationSet.size && !orientationSet.has(pOri)) return false;
       if (lookingForSet.size && !lookingForSet.has(pLF)) return false;
       if (genderSet.size && !genderSet.has(pGender)) return false;
+      if (romanticOrientationSet.size && !romanticOrientationSet.has(pRom)) return false;
 
       if (ageMin !== "" && !Number.isNaN(pAge) && pAge < Number(ageMin)) return false;
       if (ageMax !== "" && !Number.isNaN(pAge) && pAge > Number(ageMax)) return false;
 
       if (qq) {
-        const blob = [p.username, p.name, p.city, p.orientation, p.looking_for, p.gender, p.info, p.contact]
+        const blob = [p.username, p.name, p.city, p.orientation, p.looking_for, p.gender, p.info, p.contact, p.romantic_orientation,]
           .map(normalizeText)
           .join(" ");
         if (!blob.includes(qq)) return false;
@@ -363,7 +377,7 @@ useEffect(() => {
 
       return true;
     });
-  }, [profiles, q, citySet, orientationSet, lookingForSet, genderSet, ageMin, ageMax]);
+  }, [profiles, q, citySet, orientationSet, lookingForSet, genderSet, ageMin, ageMax,romanticOrientationSet]);
 
   const totalPosts = filtered.length;
 
@@ -407,6 +421,7 @@ useEffect(() => {
     setGenderSet(new Set());
     setAgeMin("");
     setAgeMax("");
+    setRomanticOrientationSet(new Set());
   };
 
   const cityOptions = useMemo(() => CITY_OPTIONS, []);
@@ -416,7 +431,10 @@ useEffect(() => {
     []
   );
   const genderOptions = useMemo(() => GENDER_OPTIONS.map((x) => ({ value: x, label: x.replaceAll("-", " ") })), []);
-
+  const romanticOrientationOptions = useMemo(
+  () => ROMANTIC_ORIENTATION_OPTIONS.map((x) => ({ value: x, label: x })),
+  []
+);
 return (
   <div style={S.page}>
     <TopBar
@@ -493,7 +511,7 @@ return (
             <MultiSelect label="Orientation" options={orientationOptions} valueSet={orientationSet} onChangeSet={setOrientationSet} placeholder="Any orientation" />
             <MultiSelect label="Looking for" options={lookingForOptions} valueSet={lookingForSet} onChangeSet={setLookingForSet} placeholder="Any" />
             <MultiSelect label="Gender" options={genderOptions} valueSet={genderSet} onChangeSet={setGenderSet} placeholder="Any" />
-
+            <MultiSelect label="Romantic orientation" options={romanticOrientationOptions} valueSet={romanticOrientationSet} onChangeSet={setRomanticOrientationSet} placeholder="Any romantic orientation"/>
             <div style={S.ageWrap}>
               <div style={S.msLabel}>Age range</div>
               <div style={S.ageRow}>

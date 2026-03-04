@@ -15,10 +15,7 @@ def now_utc():
     return datetime.utcnow()
 
 def build_map(canon_list):
-    """
-    Map lowercase -> canonical string.
-    Example: 'ace' -> 'Ace'
-    """
+    """Map lowercase -> canonical string. Example: 'ace' -> 'Ace'"""
     return {c.lower(): c for c in canon_list}
 
 ORI_MAP = build_map(ORIENTATION_CANON)
@@ -37,7 +34,7 @@ def normalize_field(value, mapping):
     key = value.strip().lower()
     if not key:
         return None
-    return mapping.get(key)  # returns canonical or None
+    return mapping.get(key)
 
 def main():
     client = MongoClient(MONGO_URI)
@@ -47,11 +44,20 @@ def main():
     scanned = 0
     updated = 0
 
-    cursor = users.find({}, {"orientation": 1, "looking_for": 1, "gender": 1})
+    # include romantic_orientation so we can set it too
+    cursor = users.find({}, {
+        "orientation": 1,
+        "looking_for": 1,
+        "gender": 1,
+        "preference": 1,
+        "romantic_orientation": 1,   # ✅ NEW
+    })
+
     for doc in cursor:
         scanned += 1
         sets = {}
 
+        # normalize existing fields
         new_ori = normalize_field(doc.get("orientation"), ORI_MAP)
         if new_ori is not None and doc.get("orientation") != new_ori:
             sets["orientation"] = new_ori
@@ -63,6 +69,14 @@ def main():
         new_gender = normalize_field(doc.get("gender"), GENDER_MAP)
         if new_gender is not None and doc.get("gender") != new_gender:
             sets["gender"] = new_gender
+
+        # ✅ force preference to "" for ALL existing users
+        if doc.get("preference", None) != "":
+            sets["preference"] = ""
+
+        # ✅ NEW: ensure romantic_orientation exists and is "" for ALL existing users
+        if doc.get("romantic_orientation", None) != "":
+            sets["romantic_orientation"] = ""
 
         if sets:
             sets["updated_at"] = now_utc()

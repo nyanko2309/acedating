@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-change-me")
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 # IMPORTANT for APIs: avoid slash-redirect surprises on POST/OPTIONS
 APPEND_SLASH = False
@@ -21,9 +21,7 @@ APPEND_SLASH = False
 # Comma-separated in env:
 # ALLOWED_HOSTS="acedating.onrender.com,localhost,127.0.0.1"
 ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if h.strip()
+   "*"
 ]
 
 # If you're behind Render/Proxy
@@ -177,6 +175,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 CSRF_TRUSTED_ORIGINS = [
     "https://acedating.vercel.app",
     "https://www.acedating.vercel.app",
+    "https://acedating-new.onrender.com",
 ]
 
 # -------------------------------------------------

@@ -2,6 +2,9 @@ from datetime import datetime
 from uuid import uuid4
 from datetime import timezone
 
+import requests
+import time
+from django.http import JsonResponse
 from bson import ObjectId
 from django.contrib.auth.hashers import make_password, check_password
 from rest_framework.views import APIView
@@ -595,7 +598,24 @@ class DeleteLetterView(APIView):
         letters.delete_one({"_id": lid})
         return Response({"ok": True}, status=200)
 
-from django.http import JsonResponse
 
+HEALTH_URL = "https://acedating-new.onrender.com/api/health"
+DEPLOY_HOOK = "https://api.render.com/deploy/srv-d6jmf40gjchc73avi870?key=qxv5FoNuIfs"
 def health(request):
-    return JsonResponse({"ok": True})
+     try:
+        r = requests.get(HEALTH_URL, timeout=10)
+
+        if r.status_code == 200:
+            return JsonResponse({"status": "healthy"})
+        
+       
+
+        r2 = requests.get(HEALTH_URL, timeout=10)
+
+        if r2.status_code == 200:
+            return JsonResponse({"status": "recovered_after_redeploy"})
+
+        return JsonResponse({"status": "still_unhealthy"})
+
+     except Exception as e:
+        return JsonResponse({"error": str(e)})

@@ -96,8 +96,9 @@ export default function Inbox() {
   const T = {
     table: {
       border: "1px solid rgba(255,255,255,0.14)",
-      background: "rgba(255,255,255,0.06)",
+      background: "rgba(63, 94, 63, 0.41)",
       borderRadius: 18,
+      color: "#111",
       
     },
     head: {
@@ -163,7 +164,7 @@ export default function Inbox() {
   const showEmptyNice = !loading && !err && items.length === 0;
 
   return (
-    <div style={S.page}>
+    <div style={S.page }>
       <TopBar
          links={[
     { to: "/home", label: "Home" },
@@ -199,7 +200,7 @@ export default function Inbox() {
 
                 <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
                   {!openLetter.read_at && (
-                    <button type="button" style={S.primaryBtn} onClick={() => markRead(openLetter._id)}>
+                    <button type="button" style={S.primaryBtn } onClick={() => markRead(openLetter._id)}>
                       Mark read
                     </button>
                   )}
@@ -212,10 +213,10 @@ export default function Inbox() {
           </div>
         )}
 
-        <div style={S.shell}>
+        <div style={S.shell }>
           <div style={S.resultsHeader}>
             <div>
-              <div style={S.resultsTitle}>Inbox</div>
+              <div style={S.resultsTitle }>Inbox</div>
               <div style={S.resultsMeta}>
                 {loading ? "Loading…" : `${items.length} message${items.length === 1 ? "" : "s"} • newest first`}
               </div>
@@ -228,7 +229,7 @@ export default function Inbox() {
             </div>
           </div>
 
-          {err && <div style={{ color: "#ffb4b4", fontWeight: 900, marginBottom: 10 }}>{err}</div>}
+          {err && <div style={{ color: "#39553b", fontWeight: 900, marginBottom: 10 }}>{err}</div>}
 
           {loading ? (
             <div style={S.loadingBox}>
@@ -252,7 +253,7 @@ export default function Inbox() {
                   </div>
 
                   <div style={T.msg(false)}>
-                    <div style={{ opacity: 0.75 }}>
+                    <div style={{ opacity: 0.75, color:"black" }}>
                       Your inbox is empty. When someone sends you a letter, it will appear here.
                     </div>
                   </div>

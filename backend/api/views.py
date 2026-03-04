@@ -608,13 +608,8 @@ def health(request):
         if r.status_code == 200:
             return JsonResponse({"status": "healthy"})
         
-       
-
-        r2 = requests.get(HEALTH_URL, timeout=10)
-
-        if r2.status_code == 200:
-            return JsonResponse({"status": "recovered_after_redeploy"})
-
+        # trigger redeploy
+        requests.post(DEPLOY_HOOK, timeout=10)
         return JsonResponse({"status": "still_unhealthy"})
 
      except Exception as e:

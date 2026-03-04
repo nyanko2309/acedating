@@ -600,17 +600,13 @@ class DeleteLetterView(APIView):
 
 
 HEALTH_URL = "https://acedating-new.onrender.com/api/health"
-DEPLOY_HOOK = "https://api.render.com/deploy/srv-d6jmf40gjchc73avi870?key=qxv5FoNuIfs"
+
 def health(request):
      try:
         r = requests.get(HEALTH_URL, timeout=10)
 
         if r.status_code == 200:
             return JsonResponse({"status": "healthy"})
-        
-        # trigger redeploy
-        requests.post(DEPLOY_HOOK, timeout=10)
-        return JsonResponse({"status": "still_unhealthy"})
-
+       
      except Exception as e:
         return JsonResponse({"error": str(e)})

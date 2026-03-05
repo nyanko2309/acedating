@@ -641,6 +641,7 @@ class DeleteLetterView(APIView):
 HEALTH_URL = "https://acedating-new.onrender.com/api/health"
 from rest_framework.views import APIView
 from rest_framework.response import Response
+
 class health(APIView):
     authentication_classes = []
     permission_classes = []

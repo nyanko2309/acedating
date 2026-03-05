@@ -199,6 +199,11 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
         </div>
 
         <div style={S.detailRow}>
+          <div style={S.detailKey}>Romantic orientation</div>
+          <div style={S.detailVal}>{p.romantic_orientation ?? "—"}</div>
+        </div>
+       
+        <div style={S.detailRow}>
           <div style={S.detailKey}>Looking for</div>
           <div style={S.detailVal}>{p.looking_for ?? "—"}</div>
         </div>

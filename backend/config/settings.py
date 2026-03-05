@@ -175,7 +175,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 CSRF_TRUSTED_ORIGINS = [
     "https://acedating.vercel.app",
     "https://www.acedating.vercel.app",
-    "https://acedating-new.onrender.com",
+    "https://acedating-htbp.onrender.com",
 ]
 
 # -------------------------------------------------

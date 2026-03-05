@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { loginPageCss } from "./LoginPagestyles";
+import { Link } from "react-router-dom";
 
 const CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET;
@@ -220,6 +221,9 @@ function LoginPage() {
                   <button className="flip-card__btn" type="submit">
                     Let's go!
                   </button>
+                   <Link to="/forgot" className="flip-card__btn2">
+                    Reset password
+                  </Link>
                 </form>
               </div>
 

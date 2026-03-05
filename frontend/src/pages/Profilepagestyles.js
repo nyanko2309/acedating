@@ -36,7 +36,7 @@ export const S = {
     marginTop: 12,
     background: "rgba(255,80,100,0.14)",
     border: "1px solid rgba(255,80,100,0.30)",
-    color: "rgba(255,220,225,0.95)",
+    color: "rgba(44, 34, 48, 0.95)",
     padding: "10px 12px",
     borderRadius: 14,
     fontWeight: 800,

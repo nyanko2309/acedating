@@ -13,6 +13,7 @@ import Random from "./pages/Random";
 import Latters from "./pages/Latters";
 import WriteLatter from "./pages/WriteLatter";
 import Infopage from "./pages/Infopage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 
 function App() {
   
@@ -30,6 +31,7 @@ function App() {
         <Route path="/latters" element={<Latters/>} />
         <Route path="/info" element={<Infopage/>} />
         <Route path="/writelatter/:profile_id" element={<WriteLatter />} />
+        <Route path="/forgot" element={<ForgotPasswordPage />} />
       </Routes>
 </Router>
       <SpeedInsights />

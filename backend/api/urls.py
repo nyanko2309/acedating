@@ -1,7 +1,7 @@
 # api/urls.py
 from django.urls import path
 from .views import SignUpView, LoginView, ProfilesListView, ProfileView,CloudinaryDeleteView,ProfilessavedListView,LikesView,WriteLatterView,InboxView
-from .views import DeleteLetterView,MarkLetterReadView,health
+from .views import DeleteLetterView,MarkLetterReadView,health, ResetPasswordView
 urlpatterns = [
     path("signup", SignUpView.as_view()),
     path("login", LoginView.as_view()),
@@ -15,5 +15,6 @@ urlpatterns = [
     path("likes/<str:user_id>/<str:profile_id>", LikesView.as_view()),
     path("letters/<str:letter_id>", DeleteLetterView.as_view()),
     path("letters/<str:letter_id>/read", MarkLetterReadView.as_view()),  
-    path("health", health),    
+    path("health", health),   
+    path("reset-password", ResetPasswordView.as_view()), 
 ]

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import uuid4
 from datetime import timezone
-
+from pymongo.errors import DuplicateKeyError
 import requests
 import time
 from django.http import JsonResponse
@@ -79,7 +79,7 @@ PROFILE_ALLOWED_FIELDS = {
     "info",
     "contact",
     "image_url",
-    "image_public_id",       # (you already use it in ProfilePage payload)
+    "image_public_id",      
 }
 
 
@@ -193,6 +193,43 @@ class LoginView(APIView):
             status=200,
         )
 
+class ResetPasswordView(APIView):
+    """
+    POST /api/auth/reset-password
+    Body: { username, new_password }
+    Resets password for username (no email flow).
+    """
+
+    def post(self, request):
+        db = get_db()
+        users = db["users"]
+
+        data = request.data or {}
+        username = (data.get("username") or "").strip()
+        new_password = data.get("new_password") or ""
+
+        if not username or not new_password:
+            return Response({"error": "username and new_password are required"}, status=400)
+
+        if len(new_password) < 6:
+            return Response({"error": "Password must be at least 6 characters"}, status=400)
+
+        user = users.find_one({"username": username})
+        if not user:
+            # (safer) don't reveal if username exists
+            return Response({"message": "If the user exists, password was updated"}, status=200)
+
+        token = str(uuid4())  # force re-login everywhere
+        users.update_one(
+            {"_id": user["_id"]},
+            {"$set": {
+                "password_hash": make_password(new_password),
+                "session_token": token,
+                "updated_at": datetime.utcnow()
+            }},
+        )
+
+        return Response({"message": "Password updated"}, status=status.HTTP_200_OK)
 
 class PingView(APIView):
     def get(self, request):
@@ -357,8 +394,10 @@ class ProfileView(APIView):
             update_fields["romantic_orientation"] = str(update_fields["romantic_orientation"]).strip()
 
         update_fields["updated_at"] = datetime.utcnow()
-        users.update_one({"_id": uid}, {"$set": update_fields})
-
+        try:
+         users.update_one({"_id": uid}, {"$set": update_fields})
+        except DuplicateKeyError:
+         return Response({"error": "Username already exists"}, status=409)
         doc = users.find_one({"_id": uid}, {"password_hash": 0, "session_token": 0, "liked": 0})
         return Response(serialize_mongo(doc), status=200)
 

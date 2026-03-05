@@ -15,6 +15,6 @@ urlpatterns = [
     path("likes/<str:user_id>/<str:profile_id>", LikesView.as_view()),
     path("letters/<str:letter_id>", DeleteLetterView.as_view()),
     path("letters/<str:letter_id>/read", MarkLetterReadView.as_view()),  
-    path("health", health),   
+    path("health", health.as_view),   
     path("reset-password", ResetPasswordView.as_view()), 
 ]

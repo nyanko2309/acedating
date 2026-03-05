@@ -639,13 +639,11 @@ class DeleteLetterView(APIView):
 
 
 HEALTH_URL = "https://acedating-new.onrender.com/api/health"
+from rest_framework.views import APIView
+from rest_framework.response import Response
+class health(APIView):
+    authentication_classes = []
+    permission_classes = []
 
-def health(request):
-     try:
-        r = requests.get(HEALTH_URL, timeout=10)
-
-        if r.status_code == 200:
-            return JsonResponse({"status": "healthy"})
-       
-     except Exception as e:
-        return JsonResponse({"error": str(e)})
+    def get(self, request):
+        return Response({"ok": True})

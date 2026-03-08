@@ -322,11 +322,11 @@ function LoginPage() {
                     onChange={(e) => setSignupPreference(e.target.value)}
                   >
                     <option value="">Preference (what gender can see you)</option>
-                    <option value="woman">woman</option>
-                    <option value="man">man</option>
-                    <option value="non-binary">non-binary</option>
-                    <option value="other">other</option>
-                    <option value="any">doesnt matter</option>
+                    <option value="Woman">Woman</option>
+                    <option value="Man">Man</option>
+                    <option value="Non-binary">Non-binary</option>
+                    <option value="Other">other</option>
+                    <option value="Any">doesnt matter</option>
                   </select>
 
                   <div className="helper">
@@ -425,10 +425,10 @@ function LoginPage() {
                     required
                   >
                     <option value="">Gender</option>
-                    <option value="man">man</option>
-                    <option value="woman">woman</option>
-                    <option value="non-binary">non binary</option>
-                    <option value="other">other</option>
+                    <option value="Man">Man</option>
+                    <option value="Woman">Woman</option>
+                    <option value="Non-binary">non binary</option>
+                    <option value="Other">other</option>
                   </select>
 
                   <textarea

@@ -17,7 +17,7 @@ export default function ForgotPasswordPage() {
   const [err, setErr] = useState("");
 
   const canSubmit = useMemo(() => {
-    return username.trim().length >= 2 && newPass.length >= 6 && newPass === newPass2;
+    return username.trim().length >= 2 && newPass.length >= 3 && newPass === newPass2;
   }, [username, newPass, newPass2]);
 
   const onSubmit = async (e) => {
@@ -27,7 +27,7 @@ export default function ForgotPasswordPage() {
 
     const u = username.trim();
     if (!u) return setErr("Please enter your username.");
-    if (newPass.length < 6) return setErr("Password must be at least 6 characters.");
+    if (newPass.length < 3) return setErr("Password must be at least 6 characters.");
     if (newPass !== newPass2) return setErr("Passwords do not match.");
 
     setLoading(true);

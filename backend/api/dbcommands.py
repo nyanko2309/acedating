@@ -10,6 +10,7 @@ COLL_NAME = "users"
 ORIENTATION_CANON = ["Ace", "Aro", "Aroace", "Demi", "Grey-asexual"]
 LOOKING_FOR_CANON = ["Friendship", "Monogamy-romance", "Qpr", "Polyamory-romance"]
 GENDER_CANON = ["Man", "Woman", "Non-binary", "Other"]
+PREFERENCE_CANON = ["Man", "Woman", "Non-binary", "Other", "Any"]
 
 def now_utc():
     return datetime.utcnow()
@@ -21,6 +22,7 @@ def build_map(canon_list):
 ORI_MAP = build_map(ORIENTATION_CANON)
 LF_MAP = build_map(LOOKING_FOR_CANON)
 GENDER_MAP = build_map(GENDER_CANON)
+PREFERENCE_MAP = build_map(PREFERENCE_CANON)
 
 def normalize_field(value, mapping):
     """
@@ -44,20 +46,18 @@ def main():
     scanned = 0
     updated = 0
 
-    # include romantic_orientation so we can set it too
     cursor = users.find({}, {
         "orientation": 1,
         "looking_for": 1,
         "gender": 1,
         "preference": 1,
-        "romantic_orientation": 1,   # ✅ NEW
+        "romantic_orientation": 1,
     })
 
     for doc in cursor:
         scanned += 1
         sets = {}
 
-        # normalize existing fields
         new_ori = normalize_field(doc.get("orientation"), ORI_MAP)
         if new_ori is not None and doc.get("orientation") != new_ori:
             sets["orientation"] = new_ori
@@ -70,12 +70,12 @@ def main():
         if new_gender is not None and doc.get("gender") != new_gender:
             sets["gender"] = new_gender
 
-        # ✅ force preference to "" for ALL existing users
-        if doc.get("preference", None) != "":
-            sets["preference"] = ""
+        new_pref = normalize_field(doc.get("preference"), PREFERENCE_MAP)
+        if new_pref is not None and doc.get("preference") != new_pref:
+            sets["preference"] = new_pref
 
-        # ✅ NEW: ensure romantic_orientation exists and is "" for ALL existing users
-        if doc.get("romantic_orientation", None) != "":
+        # keep romantic_orientation as "" if missing / null
+        if doc.get("romantic_orientation", None) is None:
             sets["romantic_orientation"] = ""
 
         if sets:

@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
     try {
       // backend should NOT reveal whether username exists (avoid user enumeration),
       // but for a small app you can still return a clear message.
-      await axios.post(`${API_BASE}/api/auth/reset-password`, {
+      await axios.post(`${API_BASE}/api/reset-password`, {
         username: u,
         new_password: newPass,
       });

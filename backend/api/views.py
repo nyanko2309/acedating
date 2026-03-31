@@ -282,6 +282,7 @@ class ProfilesListView(APIView):
             q["$or"] = [
                 {"preference": viewer_gender},
                 {"preference": ""},
+                {"preference": "Any"},
                 {"preference": None},
                 {"preference": {"$exists": False}},
             ]

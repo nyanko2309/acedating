@@ -167,18 +167,20 @@ function LoginPage() {
         </div>
       )}
 
-      <div className="page-header">
+    <div className="page-header">
         <h1 className="page-title">♠SPADES♠</h1>
 
         <p className="page-sub">
           This is a student project. You’re welcome to support me and send some money if you want (
           
+            <a
             href="https://www.bitpay.co.il/app/me/5B084B7C-5DD9-17A9-2656-4AFB88B5A9EBF7B5"
             target="_blank"
             rel="noreferrer"
-          
-            Support via Bit 💚
-          
+            style={{ color: "inherit", textDecoration: "underline" }}
+         >
+            bit here
+          </a>
           ).
           <br />
           If you want anything improved, you’re welcome to write to me at{" "}

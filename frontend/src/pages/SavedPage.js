@@ -153,7 +153,7 @@ function ProfileCard({ p, isFav, isMatch, onToggleFav, onOpenImage }) {
           onClick={onToggleFav}
           title={isFav ? "Unfavorite" : "Favorite"}
         >
-          {isFav ? "★" : "☆"}
+          {isFav ? "❤️" : "🤍"}
         </button>
       </div>
 

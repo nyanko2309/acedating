@@ -224,7 +224,7 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage, onWriteMessage }) {
             onClick={onToggleFav}
             title={isFav ? "Saved" : "Save"}
           >
-            {isFav ? "★" : "☆"}
+             {isFav ? "❤️" : "🤍"}
           </button>
         </div>
       </div>
@@ -796,7 +796,7 @@ export default function Homepage() {
                   {heartBurst && (
                     <>
                       <div className="__hp_heart_ring__" />
-                      <div className="__hp_heart_burst__">★</div>
+                      <div className="__hp_heart_burst__">❤️</div>
                     </>
                   )}
                 </div>

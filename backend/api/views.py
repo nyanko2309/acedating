@@ -45,14 +45,6 @@ def serialize_mongo(doc):
 
 
 def require_session(request, users, claimed_user_id):
-    """
-    Verifies the caller actually owns claimed_user_id by checking
-    X-Session-Token against what's stored in Mongo for that user.
-
-    Returns (uid, None) on success, or (None, error_response) on failure.
-    claimed_user_id can come from a URL path segment or the body — either
-    way, it's just an attacker-controlled claim until proven with the token.
-    """
     uid = oid(claimed_user_id)
     if not uid:
         return None, Response({"error": "Invalid user id"}, status=400)
@@ -66,6 +58,48 @@ def require_session(request, users, claimed_user_id):
         return None, Response({"error": "Invalid or expired session"}, status=401)
 
     return uid, None
+
+
+# ✅ NEW — canonical preference values; "Any" is gone as an explicit value —
+# an empty list now means "visible to everyone" instead.
+PREFERENCE_CANON = {"Woman", "Man", "Non-binary", "Other"}
+
+
+def parse_preference(raw):
+    """
+    Normalizes incoming preference data into a clean list of canonical
+    strings, deduplicated, in the order they were sent.
+
+    Accepts:
+      - a list of strings (the new multi-select format)
+      - a single string (legacy format, e.g. "Woman", "", "Any", "any")
+      - None / missing
+
+    "" and "any"/"Any" (legacy single-value "anyone" markers) both resolve
+    to an empty list, matching the new "empty list = anyone" convention.
+    Anything not in PREFERENCE_CANON is silently dropped rather than
+    raising, so a stray/garbled value never blocks the request.
+    """
+    if raw is None:
+        return []
+
+    if isinstance(raw, str):
+        val = raw.strip()
+        if not val or val.lower() == "any":
+            return []
+        raw = [val]
+
+    if not isinstance(raw, list):
+        return []
+
+    cleaned = []
+    for v in raw:
+        if not isinstance(v, str):
+            continue
+        v = v.strip()
+        if v in PREFERENCE_CANON and v not in cleaned:
+            cleaned.append(v)
+    return cleaned
 
 
 PROFILE_ALLOWED_FIELDS = {
@@ -109,7 +143,8 @@ class SignUpView(APIView):
         except Exception:
             return Response({"error": "age must be a number"}, status=400)
 
-        preference = (data.get("preference") or "").strip()
+        # ✅ CHANGED — was a stripped string, now a normalized list
+        preference = parse_preference(data.get("preference"))
         romantic_orientation = (data.get("romantic_orientation") or "").strip()
         email = (data.get("email") or "").strip().lower()
 
@@ -262,8 +297,14 @@ class ProfilesListView(APIView):
                 q["_id"] = {"$ne": viewer_oid}
 
         if viewer_gender in {"Woman", "Man", "Non-binary", "Other"}:
+            # ✅ CHANGED — added {"preference": []} to explicitly match the
+            # new "empty array = anyone" case. Everything else is unchanged:
+            # {"preference": viewer_gender} still matches BOTH a legacy
+            # scalar string equal to viewer_gender AND a new array that
+            # contains viewer_gender — Mongo does this automatically.
             q["$or"] = [
                 {"preference": viewer_gender},
+                {"preference": []},
                 {"preference": ""},
                 {"preference": "Any"},
                 {"preference": None},
@@ -350,8 +391,6 @@ class ProfileView(APIView):
         db = get_db()
         users = db["users"]
 
-        # ✅ FIXED: real session-token check instead of comparing two
-        # attacker-controlled values against each other
         uid, err = require_session(request, users, user_id)
         if err:
             return err
@@ -365,9 +404,12 @@ class ProfileView(APIView):
             except Exception:
                 return Response({"error": "Age must be a number"}, status=400)
 
-        if "preference" in update_fields and update_fields["preference"] is not None:
-            pref = str(update_fields["preference"]).strip()
-            update_fields["preference"] = "" if pref == "any" else pref
+        # ✅ CHANGED — was a single "any" → "" check, now normalizes to a
+        # clean list via parse_preference (handles both list and legacy
+        # single-string payloads, so old frontends calling this endpoint
+        # wouldn't break either)
+        if "preference" in update_fields:
+            update_fields["preference"] = parse_preference(update_fields["preference"])
 
         if "romantic_orientation" in update_fields and update_fields["romantic_orientation"] is not None:
             update_fields["romantic_orientation"] = str(update_fields["romantic_orientation"]).strip()
@@ -433,7 +475,6 @@ class LikesView(APIView):
         db = get_db()
         users = db["users"]
 
-        # ✅ FIXED: only the real session owner can like on behalf of user_id
         uid, err = require_session(request, users, user_id)
         if err:
             return err
@@ -451,13 +492,15 @@ class LikesView(APIView):
         if res.matched_count == 0:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response({"ok": True}, status=status.HTTP_200_OK)
+        other = users.find_one({"_id": pid}, {"liked": 1})
+        is_match = bool(other and uid in (other.get("liked") or []))
+
+        return Response({"ok": True, "match": is_match}, status=status.HTTP_200_OK)
 
     def delete(self, request, user_id, profile_id):
         db = get_db()
         users = db["users"]
 
-        # ✅ FIXED
         uid, err = require_session(request, users, user_id)
         if err:
             return err
@@ -482,7 +525,6 @@ class WriteLatterView(APIView):
         letters = db["letters"]
         users = db["users"]
 
-        # ✅ FIXED: only the real session owner can send as user_id
         sender, err = require_session(request, users, user_id)
         if err:
             return err
@@ -525,7 +567,6 @@ class InboxView(APIView):
         letters = db["letters"]
         users = db["users"]
 
-        # ✅ FIXED: your inbox is private, only you should read it
         uid, err = require_session(request, users, user_id)
         if err:
             return err
@@ -564,7 +605,6 @@ class MarkLetterReadView(APIView):
         users = db["users"]
 
         claimed_user_id = request.data.get("user_id")
-        # ✅ FIXED: verify session before trusting the claimed user_id
         uid, err = require_session(request, users, claimed_user_id)
         if err:
             return err
@@ -596,7 +636,6 @@ class DeleteLetterView(APIView):
         users = db["users"]
 
         claimed_user_id = request.query_params.get("user_id")
-        # ✅ FIXED
         uid, err = require_session(request, users, claimed_user_id)
         if err:
             return err
@@ -645,27 +684,17 @@ class health(APIView):
 
     def get(self, request):
         return Response({"ok": True})
-    
+
+
 class LikedByView(APIView):
-    """
-    GET /api/likedby/<user_id>
-    Headers: X-Session-Token (must belong to user_id)
-
-    Returns every user who has saved/liked this profile — i.e. every user
-    document whose "liked" array contains user_id.
-    Private by design: only the account owner can see who saved them.
-    """
-
     def get(self, request, user_id):
         db = get_db()
         users = db["users"]
 
-        # Only the profile owner can see who saved them
         uid, err = require_session(request, users, user_id)
         if err:
             return err
 
-        # find every user doc whose "liked" array contains this uid
         docs = list(
             users.find(
                 {"liked": uid},

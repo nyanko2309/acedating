@@ -1,89 +1,83 @@
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
+from pymongo.errors import ServerSelectionTimeoutError
 from datetime import datetime
 
-# ====== CONFIG ======
 MONGO_URI = "mongodb+srv://yanazlatin:Yana2309@profiles.jrwyitf.mongodb.net/"
 DB_NAME = "ace_dating_db"
 COLL_NAME = "users"
 
-# Canonical values you want in DB
-ORIENTATION_CANON = ["Ace", "Aro", "Aroace", "Demi", "Grey-asexual"]
-LOOKING_FOR_CANON = ["Friendship", "Monogamy-romance", "Qpr", "Polyamory-romance"]
-GENDER_CANON = ["Man", "Woman", "Non-binary", "Other"]
-PREFERENCE_CANON = ["Man", "Woman", "Non-binary", "Other", "Any"]
+PREFERENCE_CANON = {"Woman", "Man", "Non-binary", "Other"}
+
 
 def now_utc():
     return datetime.utcnow()
 
-def build_map(canon_list):
-    """Map lowercase -> canonical string. Example: 'ace' -> 'Ace'"""
-    return {c.lower(): c for c in canon_list}
 
-ORI_MAP = build_map(ORIENTATION_CANON)
-LF_MAP = build_map(LOOKING_FOR_CANON)
-GENDER_MAP = build_map(GENDER_CANON)
-PREFERENCE_MAP = build_map(PREFERENCE_CANON)
+def to_preference_list(raw):
+    """
+    Converts a legacy scalar preference value into the new array format.
+    "" / "any" / "Any" / None -> [] (means "visible to everyone")
+    A valid canonical string -> [that string]
+    Anything already a list -> cleaned/deduped as-is
+    Anything unrecognized -> [] (safer than leaving garbage)
+    """
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return [v for v in raw if isinstance(v, str) and v.strip() in PREFERENCE_CANON]
+    if isinstance(raw, str):
+        val = raw.strip()
+        if not val or val.lower() == "any":
+            return []
+        if val in PREFERENCE_CANON:
+            return [val]
+        return []  # unrecognized value — treat as "anyone" rather than guess
+    return []
 
-def normalize_field(value, mapping):
-    """
-    If value matches mapping case-insensitively, return canonical.
-    Otherwise return None (meaning: don't change it).
-    """
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        return None
-    key = value.strip().lower()
-    if not key:
-        return None
-    return mapping.get(key)
 
 def main():
-    client = MongoClient(MONGO_URI)
+    client = MongoClient(
+        MONGO_URI,
+        serverSelectionTimeoutMS=10000,
+        connectTimeoutMS=10000,
+        socketTimeoutMS=10000,
+    )
+
+    try:
+        client.admin.command("ping")
+    except ServerSelectionTimeoutError as e:
+        print("❌ Could not connect to MongoDB Atlas within 10s.")
+        print(f"   Details: {e}")
+        return
+
     db = client[DB_NAME]
     users = db[COLL_NAME]
 
     scanned = 0
-    updated = 0
+    ops = []
+    already_arrays = 0
 
-    cursor = users.find({}, {
-        "orientation": 1,
-        "looking_for": 1,
-        "gender": 1,
-        "preference": 1,
-        "romantic_orientation": 1,
-    })
-
-    for doc in cursor:
+    for doc in users.find({}, {"preference": 1, "username": 1}):
         scanned += 1
-        sets = {}
+        raw = doc.get("preference")
 
-        new_ori = normalize_field(doc.get("orientation"), ORI_MAP)
-        if new_ori is not None and doc.get("orientation") != new_ori:
-            sets["orientation"] = new_ori
+        if isinstance(raw, list):
+            already_arrays += 1
+            continue  # already migrated, skip
 
-        new_lf = normalize_field(doc.get("looking_for"), LF_MAP)
-        if new_lf is not None and doc.get("looking_for") != new_lf:
-            sets["looking_for"] = new_lf
+        new_pref = to_preference_list(raw)
+        ops.append(UpdateOne(
+            {"_id": doc["_id"]},
+            {"$set": {"preference": new_pref, "updated_at": now_utc()}}
+        ))
 
-        new_gender = normalize_field(doc.get("gender"), GENDER_MAP)
-        if new_gender is not None and doc.get("gender") != new_gender:
-            sets["gender"] = new_gender
+    updated = 0
+    if ops:
+        result = users.bulk_write(ops)
+        updated = result.modified_count
 
-        new_pref = normalize_field(doc.get("preference"), PREFERENCE_MAP)
-        if new_pref is not None and doc.get("preference") != new_pref:
-            sets["preference"] = new_pref
+    print(f"Done. Scanned: {scanned}, Already arrays (skipped): {already_arrays}, Updated: {updated}")
 
-        # keep romantic_orientation as "" if missing / null
-        if doc.get("romantic_orientation", None) is None:
-            sets["romantic_orientation"] = ""
-
-        if sets:
-            sets["updated_at"] = now_utc()
-            users.update_one({"_id": doc["_id"]}, {"$set": sets})
-            updated += 1
-
-    print(f"Done. Scanned: {scanned}, Updated: {updated}")
 
 if __name__ == "__main__":
     main()

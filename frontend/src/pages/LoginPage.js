@@ -1,5 +1,5 @@
 // LoginPage.js
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import axios from "axios";
 import { loginPageCss } from "./LoginPagestyles";
 import { Link } from "react-router-dom";
@@ -33,32 +33,104 @@ const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 const BASE_URL_Login = `${API_BASE}/api/login`;
 const BASE_URL_SignUp = `${API_BASE}/api/signup`;
 
+// ✅ NEW — "Any" removed; leaving all boxes unchecked now means "anyone"
+const PREFERENCE_OPTIONS = ["Woman", "Man", "Non-binary", "Other"];
+
+const widerCardOverrideCss = `
+  .wrapper {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
+  .card-switch {
+    margin: 0 auto !important;
+  }
+  .flip-card__front,
+  .flip-card__back {
+    width: min(760px, 94vw) !important;
+  }
+`;
+
+const ABOUT_QUESTIONS = [
+  {
+    key: "lookingFor",
+    label: "What am I looking for here?",
+    placeholder: "e.g. friendship, a QPR, someone to talk to…",
+  },
+  {
+    key: "orientationDetail",
+    label: "My orientation, in my own words (sexual + romantic)",
+    placeholder: "e.g. demisexual, biromantic — happy to explain more if asked",
+  },
+  {
+    key: "hobbies",
+    label: "Hobbies / what I like doing in my free time",
+    placeholder: "e.g. reading, hiking, video games, painting…",
+  },
+  {
+    key: "values",
+    label: "What matters to me in a relationship / my values",
+    placeholder: "e.g. honesty, patience, having our own space…",
+  },
+  {
+    key: "boundaries",
+    label: "Boundaries I want respected",
+    placeholder: "e.g. no pressure to explain my identity, no rushing physical closeness…",
+  },
+];
+
 function LoginPage() {
-  // loading popup
   const [loadingPopup, setLoadingPopup] = useState(false);
   const [loadingText, setLoadingText] = useState("Loading…");
 
-  // LOGIN
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
 
-  // SIGN UP
   const [signupUsername, setSignupUsername] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupName, setSignupName] = useState("");
   const [signupAge, setSignupAge] = useState("");
   const [signupOrientation, setSignupOrientation] = useState("");
-  const [signupRomanticOrientation, setSignupRomanticOrientation] = useState(""); // ✅ NEW
+  const [signupRomanticOrientation, setSignupRomanticOrientation] = useState("");
   const [signupLookingFor, setSignupLookingFor] = useState("");
-  const [signupPreference, setSignupPreference] = useState("");
+  // ✅ CHANGED — was a single string, now a Set of selected preferences
+  const [signupPreferenceSet, setSignupPreferenceSet] = useState(() => new Set());
   const [signupAvatarFile, setSignupAvatarFile] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [signupAvatarPreview, setSignupAvatarPreview] = useState(null);
   const [signupCity, setSignupCity] = useState("");
   const [signupGender, setSignupGender] = useState("");
-  const [signupInfo, setSignupInfo] = useState("");
   const [signupContact, setSignupContact] = useState("");
-  const [signupEmail, setSignupEmail] = useState(""); // ✅ NEW
+  const [signupEmail, setSignupEmail] = useState("");
+
+  const [aboutAnswers, setAboutAnswers] = useState(() =>
+    Object.fromEntries(ABOUT_QUESTIONS.map((q) => [q.key, ""]))
+  );
+
+  const setAboutAnswer = (key, value) => {
+    setAboutAnswers((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const allAboutAnswersEmpty = useMemo(
+    () => ABOUT_QUESTIONS.every((q) => !aboutAnswers[q.key]?.trim()),
+    [aboutAnswers]
+  );
+
+  const buildCombinedInfo = () => {
+    return ABOUT_QUESTIONS.filter((q) => aboutAnswers[q.key]?.trim())
+      .map((q) => `${q.label}\n${aboutAnswers[q.key].trim()}`)
+      .join("\n\n");
+  };
+
+  // ✅ NEW — toggle a preference checkbox on/off
+  const togglePreference = (value) => {
+    setSignupPreferenceSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return next;
+    });
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -92,6 +164,11 @@ function LoginPage() {
   const handleSignup = async (e) => {
     e.preventDefault();
 
+    if (allAboutAnswersEmpty) {
+      alert("Please answer at least one of the \"About me\" questions before signing up.");
+      return;
+    }
+
     try {
       let finalImageUrl = null;
 
@@ -115,16 +192,17 @@ function LoginPage() {
         age: Number(signupAge),
 
         orientation: signupOrientation,
-        romantic_orientation: signupRomanticOrientation, // ✅ NEW
+        romantic_orientation: signupRomanticOrientation,
 
         looking_for: signupLookingFor,
-        preference: signupPreference === "any" ? "" : signupPreference,
+        // ✅ CHANGED — sends an array now; empty array = visible to everyone
+        preference: Array.from(signupPreferenceSet),
         image_url: finalImageUrl,
         city: signupCity,
         gender: signupGender,
-        info: signupInfo,
+        info: buildCombinedInfo(),
         contact: signupContact,
-        email: signupEmail, // ✅ NEW
+        email: signupEmail,
       };
 
       await axios.post(BASE_URL_SignUp, payload, { timeout: 120000 });
@@ -155,8 +233,8 @@ function LoginPage() {
 
   return (
     <>
-  
       <style>{loginPageCss}</style>
+      <style>{widerCardOverrideCss}</style>
 
       {loadingPopup && (
         <div className="loading-overlay">
@@ -167,18 +245,17 @@ function LoginPage() {
         </div>
       )}
 
-    <div className="page-header">
+      <div className="page-header">
         <h1 className="page-title">♠SPADES♠</h1>
 
         <p className="page-sub">
           This is a student project. You’re welcome to support me and send some money if you want (
           
-            <a
-            href="https://www.bitpay.co.il/app/me/5B084B7C-5DD9-17A9-2656-4AFB88B5A9EBF7B5"
+           <a href="https://www.bitpay.co.il/app/me/5B084B7C-5DD9-17A9-2656-4AFB88B5A9EBF7B5"
             target="_blank"
             rel="noreferrer"
             style={{ color: "inherit", textDecoration: "underline" }}
-         >
+          >
             bit here
           </a>
           ).
@@ -225,7 +302,7 @@ function LoginPage() {
                   <button className="flip-card__btn" type="submit">
                     Let's go!
                   </button>
-                   <Link to="/forgot" className="flip-card__btn2">
+                  <Link to="/forgot" className="flip-card__btn2">
                     Reset password
                   </Link>
                 </form>
@@ -254,7 +331,6 @@ function LoginPage() {
                     required
                   />
 
-                  {/* ✅ NEW — optional email, used for password reset verification */}
                   <input
                     className="flip-card__input"
                     placeholder="Email (optional, used for password reset)"
@@ -297,7 +373,6 @@ function LoginPage() {
                     <option value="Grey-asexual">grey-asexual</option>
                   </select>
 
-                  {/* ✅ NEW */}
                   <select
                     className="flip-card__input"
                     value={signupRomanticOrientation}
@@ -329,21 +404,42 @@ function LoginPage() {
                     <option value="Polyamory-romance">polyamory romance</option>
                   </select>
 
-                  <select
-                    className="flip-card__input"
-                    value={signupPreference}
-                    onChange={(e) => setSignupPreference(e.target.value)}
-                  >
-                    <option value="">Preference (what gender can see you)</option>
-                    <option value="Woman">Woman</option>
-                    <option value="Man">Man</option>
-                    <option value="Non-binary">Non-binary</option>
-                    <option value="Other">other</option>
-                    <option value="Any">doesnt matter</option>
-                  </select>
+                  {/* ✅ NEW — multi-select checkboxes replacing the single dropdown */}
+                  <div style={{ width: "min(320px, 100%)" }}>
+                    <div className="helper" style={{ fontWeight: 800, marginBottom: 4 }}>
+                      Preference (who can see you)
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 10,
+                      }}
+                    >
+                      {PREFERENCE_OPTIONS.map((opt) => (
+                        <label
+                          key={opt}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            fontSize: 13,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={signupPreferenceSet.has(opt)}
+                            onChange={() => togglePreference(opt)}
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
                   <div className="helper">
-                    This controls who will see you in their results. Leave as “doesn’t matter” to allow everyone.
+                    Pick any genders you want to be visible to. Leave all unchecked to be visible to everyone.
                   </div>
 
                   <div className="helper" style={{ marginTop: 2, fontWeight: 800 }}>
@@ -444,25 +540,39 @@ function LoginPage() {
                     <option value="Other">other</option>
                   </select>
 
-                  <textarea
-                    className="flip-card__input"
-                    placeholder={
-                      "Info (max 1000 characters)\n\n" +
-                      "כמה משפטים עליי — אפשר לענות לפי השאלות:\n\n" +
-                      "• מה אני מחפש/ת פה? \n\n" +
-                      "• האוריינטציה שלי: מינית + רומנטית \n\n" +
-                      "• תחביבים ומה אני אוהב/ת לעשות בזמן פנוי\n\n" +
-                      "• מה חשוב לי בקשר / בערכים\n\n" +
-                      "• גבולות שחשוב לי שיכבדו\n\n" +
-                      "טיפ קטן: אפשר גם לכתוב מה גורם לי להרגיש בטוח/ה ונעים בקשר 🙂"
-                    }
-                    value={signupInfo}
-                    onChange={(e) => setSignupInfo(e.target.value)}
-                    rows={3}
-                    maxLength={1000}
-                    required
-                    style={{ height: 90, resize: "none" }}
-                  />
+                  <div style={{ width: "100%", marginTop: 6 }}>
+                    <div className="helper" style={{ fontWeight: 800 }}>
+                      About me — answer at least one 🙂
+                    </div>
+                    <div className="helper" style={{ marginBottom: 8 }}>
+                      These get combined into your profile's "About" section. Empty questions are just skipped.
+                    </div>
+
+                    <div style={{ display: "grid", gap: 10 }}>
+                      {ABOUT_QUESTIONS.map((q) => (
+                        <div key={q.key}>
+                          <div className="helper" style={{ marginBottom: 4 }}>
+                            {q.label}
+                          </div>
+                          <textarea
+                            className="flip-card__input"
+                            placeholder={q.placeholder}
+                            value={aboutAnswers[q.key]}
+                            onChange={(e) => setAboutAnswer(q.key, e.target.value)}
+                            rows={2}
+                            maxLength={300}
+                            style={{ height: 60, resize: "none", width: "100%" }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {allAboutAnswersEmpty && (
+                      <div className="helper" style={{ color: "#c0392b", marginTop: 6, fontWeight: 800 }}>
+                        Please answer at least one question above before signing up.
+                      </div>
+                    )}
+                  </div>
 
                   <input
                     className="flip-card__input"
@@ -473,7 +583,11 @@ function LoginPage() {
                     required
                   />
 
-                  <button className="flip-card__btn" type="submit" disabled={uploadingAvatar}>
+                  <button
+                    className="flip-card__btn"
+                    type="submit"
+                    disabled={uploadingAvatar || allAboutAnswersEmpty}
+                  >
                     {uploadingAvatar ? "Uploading…" : "Confirm!"}
                   </button>
                 </form>

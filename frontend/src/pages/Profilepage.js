@@ -6,7 +6,6 @@ import { S } from "./Profilepagestyles";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 
-/** ===== options ===== */
 const ORIENTATION_OPTIONS = ["Ace", "Aro", "Aroace", "Demi", "Grey-asexual"];
 
 const ROMANTIC_ORIENTATION_OPTIONS = [
@@ -39,13 +38,8 @@ const CITY_OPTIONS = [
   { value: "other-israel", label: "Other / Not sure" },
 ];
 
-const PREFERENCE_OPTIONS = [
-  { value: "woman", label: "woman" },
-  { value: "man", label: "man" },
-  { value: "non-binary", label: "non-binary" },
-  { value: "other", label: "other" },
-  { value: "any", label: "doesn't matter" },
-];
+// ✅ CHANGED — was a dropdown option list, now the checkbox set (no "Any" option)
+const PREFERENCE_OPTIONS = ["Woman", "Man", "Non-binary", "Other"];
 
 const AGE_OPTIONS = Array.from({ length: 83 }, (_, i) => {
   const n = i + 18;
@@ -63,6 +57,18 @@ function labelFromOptions(options, value) {
   return found?.label ?? String(value);
 }
 
+// ✅ NEW — normalizes whatever the backend returns (new array, or legacy
+// string like "Woman"/""/"Any") into a clean array for the checkbox UI
+function toPreferenceArray(raw) {
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  if (typeof raw === "string") {
+    const v = raw.trim();
+    if (!v || v.toLowerCase() === "any") return [];
+    return [v];
+  }
+  return [];
+}
+
 export default function ProfilePage() {
   const userId = useMemo(() => localStorage.getItem("user_id"), []);
   const token = useMemo(() => localStorage.getItem("token"), []);
@@ -78,24 +84,22 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [edit, setEdit] = useState(false);
 
-  // avatar upload state
   const [avatarFile, setAvatarFile] = useState(null);
 
-  // editable fields
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
-  const [age, setAge] = useState(""); // string for select
+  const [age, setAge] = useState("");
   const [city, setCity] = useState("");
   const [gender, setGender] = useState("");
   const [orientation, setOrientation] = useState("");
-  const [romanticOrientation, setRomanticOrientation] = useState(""); // ✅ NEW
+  const [romanticOrientation, setRomanticOrientation] = useState("");
   const [lookingFor, setLookingFor] = useState("");
-  const [preference, setPreference] = useState("");
+  // ✅ CHANGED — was a string, now a Set for the checkboxes
+  const [preferenceSet, setPreferenceSet] = useState(() => new Set());
   const [info, setInfo] = useState("");
-  const [contact, setContact] = useState(""); // ✅ free text
-  const [email, setEmail] = useState(""); // ✅ NEW — free text, used for password reset verification
+  const [contact, setContact] = useState("");
+  const [email, setEmail] = useState("");
 
-  // store both url + public_id so we can delete old image later
   const [imageUrl, setImageUrl] = useState("");
   const [imagePublicId, setImagePublicId] = useState("");
 
@@ -106,6 +110,16 @@ export default function ProfilePage() {
   };
 
   const PROFILE_URL = userId ? `${API_BASE}/api/profile/${userId}` : null;
+
+  // ✅ NEW — toggle a preference checkbox on/off
+  const togglePreference = (value) => {
+    setPreferenceSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return next;
+    });
+  };
 
   async function uploadAvatarToCloudinary(file) {
     if (!CLOUD_NAME || !UPLOAD_PRESET) {
@@ -154,12 +168,13 @@ export default function ProfilePage() {
         setCity(p?.city || "");
         setGender(p?.gender || "");
         setOrientation(p?.orientation || "");
-        setRomanticOrientation(p?.romantic_orientation || ""); // ✅ NEW
+        setRomanticOrientation(p?.romantic_orientation || "");
         setLookingFor(p?.looking_for || "");
-        setPreference(p?.preference || "");
+        // ✅ CHANGED — normalize whatever shape the backend returned into a Set
+        setPreferenceSet(new Set(toPreferenceArray(p?.preference)));
         setInfo(p?.info || "");
         setContact(p?.contact || "");
-        setEmail(p?.email || ""); // ✅ NEW
+        setEmail(p?.email || "");
 
         setImageUrl(p?.image_url || "");
         setImagePublicId(p?.image_public_id || "");
@@ -187,12 +202,12 @@ export default function ProfilePage() {
     setCity(profile?.city || "");
     setGender(profile?.gender || "");
     setOrientation(profile?.orientation || "");
-    setRomanticOrientation(profile?.romantic_orientation || ""); // ✅ NEW
+    setRomanticOrientation(profile?.romantic_orientation || "");
     setLookingFor(profile?.looking_for || "");
-    setPreference(profile?.preference || "");
+    setPreferenceSet(new Set(toPreferenceArray(profile?.preference))); // ✅ CHANGED
     setInfo(profile?.info || "");
     setContact(profile?.contact || "");
-    setEmail(profile?.email || ""); // ✅ NEW
+    setEmail(profile?.email || "");
 
     setImageUrl(profile?.image_url || "");
     setImagePublicId(profile?.image_public_id || "");
@@ -224,12 +239,13 @@ export default function ProfilePage() {
         city,
         gender,
         orientation,
-        romantic_orientation: romanticOrientation, // ✅ NEW
+        romantic_orientation: romanticOrientation,
         looking_for: lookingFor,
-        preference: preference === "any" ? "" : preference,
+        // ✅ CHANGED — sends an array now
+        preference: Array.from(preferenceSet),
         info,
         contact,
-        email, // ✅ NEW
+        email,
         image_url: finalUrl,
         image_public_id: finalPublicId,
       };
@@ -338,11 +354,9 @@ export default function ProfilePage() {
               </div>
 
               <div style={S.formCol}>
-                {/* keep username+name as text */}
                 <Field label="Username" value={username} setValue={setUsername} edit={edit} />
                 <Field label="Name" value={name} setValue={setName} edit={edit} />
 
-                {/* dropdowns */}
                 <SelectField label="Age" value={age} setValue={setAge} edit={edit} options={AGE_OPTIONS} />
                 <SelectField label="City / Area" value={city} setValue={setCity} edit={edit} options={CITY_OPTIONS} />
                 <SelectField label="Gender" value={gender} setValue={setGender} edit={edit} options={GENDER_OPTIONS} />
@@ -355,7 +369,6 @@ export default function ProfilePage() {
                   options={ORIENTATION_OPTIONS}
                 />
 
-                {/* ✅ NEW */}
                 <SelectField
                   label="Romantic orientation"
                   value={romanticOrientation}
@@ -373,22 +386,45 @@ export default function ProfilePage() {
                   options={LOOKING_FOR_OPTIONS}
                 />
 
-                <SelectField
-                  label="Preference (what gender can see you)"
-                  value={preference}
-                  setValue={setPreference}
-                  edit={edit}
-                  options={PREFERENCE_OPTIONS}
-                  placeholder="Preference (what gender can see you)"
-                />
+                {/* ✅ NEW — checkbox group replacing the single dropdown */}
+                <div style={S.field}>
+                  <div style={S.label}>Preference (who can see you)</div>
+                  {!edit ? (
+                    <div style={S.value}>
+                      {preferenceSet.size ? Array.from(preferenceSet).join(", ") : "Anyone"}
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                        {PREFERENCE_OPTIONS.map((opt) => (
+                          <label
+                            key={opt}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              fontSize: 13,
+                              cursor: "pointer",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={preferenceSet.has(opt)}
+                              onChange={() => togglePreference(opt)}
+                            />
+                            {opt}
+                          </label>
+                        ))}
+                      </div>
+                      <div style={S.hint}>Leave all unchecked to be visible to everyone.</div>
+                    </>
+                  )}
+                </div>
 
-                {/* contact is FREE TEXT */}
                 <Field label="Contact" value={contact} setValue={setContact} edit={edit} />
 
-                {/* ✅ NEW — email, free text, used for password-reset verification */}
                 <Field label="Email" value={email} setValue={setEmail} edit={edit} type="email" />
 
-                {/* free text */}
                 <TextField label="Info" value={info} setValue={setInfo} edit={edit} maxLength={1000} />
               </div>
             </div>

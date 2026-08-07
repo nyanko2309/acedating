@@ -58,6 +58,7 @@ function LoginPage() {
   const [signupGender, setSignupGender] = useState("");
   const [signupInfo, setSignupInfo] = useState("");
   const [signupContact, setSignupContact] = useState("");
+  const [signupEmail, setSignupEmail] = useState(""); // ✅ NEW
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -123,6 +124,7 @@ function LoginPage() {
         gender: signupGender,
         info: signupInfo,
         contact: signupContact,
+        email: signupEmail, // ✅ NEW
       };
 
       await axios.post(BASE_URL_SignUp, payload, { timeout: 120000 });
@@ -170,13 +172,13 @@ function LoginPage() {
 
         <p className="page-sub">
           This is a student project. You’re welcome to support me and send some money if you want (
-          <a
+          
             href="https://www.bitpay.co.il/app/me/5B084B7C-5DD9-17A9-2656-4AFB88B5A9EBF7B5"
             target="_blank"
             rel="noreferrer"
-          >
+          
             Support via Bit 💚
-          </a>
+          
           ).
           <br />
           If you want anything improved, you’re welcome to write to me at{" "}
@@ -248,6 +250,15 @@ function LoginPage() {
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
                     required
+                  />
+
+                  {/* ✅ NEW — optional email, used for password reset verification */}
+                  <input
+                    className="flip-card__input"
+                    placeholder="Email (optional, used for password reset)"
+                    type="email"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
                   />
 
                   <input
@@ -453,7 +464,7 @@ function LoginPage() {
 
                   <input
                     className="flip-card__input"
-                    placeholder="Contact (e.g. Discord / IG / Email)"
+                    placeholder="Contact info for my matches (e.g. Discord / IG / Email)"
                     type="text"
                     value={signupContact}
                     onChange={(e) => setSignupContact(e.target.value)}

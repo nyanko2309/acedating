@@ -5,6 +5,9 @@ import { S, ensureHomepageStyles } from "./homepageStyles";
 const WHATSAPP_LINK =
   "https://api.whatsapp.com/send/?phone=%2B9720549276236&text&type=phone_number&app_absent=0";
 
+const BIT_LINK =
+  "https://www.bitpay.co.il/app/me/5B084B7C-5DD9-17A9-2656-4AFB88B5A9EBF7B5";
+
 export default function InfoContact() {
   useEffect(() => {
     ensureHomepageStyles();
@@ -13,7 +16,7 @@ export default function InfoContact() {
   const T = {
     wrap: { padding: "14px" },
     card: {
-      background: "rgba(91, 69, 103, 0.47)",
+      background: "rgba(130, 102, 145, 0.83)",
       borderRadius: 18,
       padding: 18,
       boxShadow: "0 18px 60px rgba(0,0,0,0.18)",
@@ -35,15 +38,15 @@ export default function InfoContact() {
       padding: 14,
     },
     boxTitle: { fontSize: 13, fontWeight: 900, color: "rgba(255,255,255,0.88)", margin: 0 },
-    p: { marginTop: 10, marginBottom: 0, fontSize: 13, color: "rgba(255,255,255,0.80)", lineHeight: 1.5 },
-    ul: { marginTop: 10, marginBottom: 0, paddingLeft: 18, color: "rgba(255,255,255,0.82)", lineHeight: 1.5 },
+    p: { marginTop: 10, marginBottom: 0, fontSize: 13, color: "#0f4d2a", lineHeight: 1.5, fontWeight: 600 },
+    ul: { marginTop: 10, marginBottom: 0, paddingLeft: 18, color: "#0f4d2a", lineHeight: 1.5, fontWeight: 600 },
     li: { marginBottom: 8 },
     warn: {
       marginTop: 12,
       padding: "12px 12px",
       borderRadius: 16,
       border: "1px solid rgba(255,110,199,0.35)",
-      background: "rgba(255,110,199,0.14)",
+      background: "rgba(255, 110, 199, 0.23)",
       color: "rgba(255,255,255,0.92)",
       fontWeight: 800,
       lineHeight: 1.45,
@@ -145,6 +148,30 @@ export default function InfoContact() {
                 <div style={T.fine}>
                   Tip: Keep your “Info” cute + general. Use the “Contact” field carefully.
                 </div>
+
+                <div style={T.divider} />
+
+                <h3 style={T.boxTitle}>Privacy basics</h3>
+                <ul style={T.ul}>
+                  <li style={T.li}>
+                    There's currently no way to verify anyone's identity or age on this site — use your own judgment about who you talk to and what you share.
+                  </li>
+                  <li style={T.li}>
+                    Any info you enter here (profile details, letters, contact info, etc.) is entered entirely at your own discretion and your own risk. You're responsible for what you choose to share and with whom — this project has no way to control or take responsibility for what happens with it once it's shared.
+                  </li>
+                  <li style={T.li}>
+                    You're responsible for the content you post — don't post identifying details about other people without their consent.
+                  </li>
+                  <li style={T.li}>
+                    Nothing on this site is professional advice (legal, medical, or otherwise) — use it at your own discretion.
+                  </li>
+                  <li style={T.li}>
+                    Uptime and full security aren't guaranteed — this is a small volunteer project, not a professionally maintained platform.
+                  </li>
+                </ul>
+                <div style={T.fine}>
+                  Adapted from <a href="https://www.aspec.org.il/terms" target="_blank" rel="noreferrer" style={{ color: "rgba(255,255,255,0.85)" }}>aspec.org.il's terms</a>.
+                </div>
               </div>
 
               {/* RIGHT */}
@@ -168,10 +195,9 @@ export default function InfoContact() {
                 </p>
 
                 <div style={T.btnRow}>
-                  {/* put your payment link here later */}
-                  <span style={{ ...T.miniBtn, opacity: 0.75, cursor: "not-allowed" }}>
-                    ✨ Payment link (coming soon)
-                  </span>
+                  <a href={BIT_LINK} target="_blank" rel="noreferrer" style={T.miniBtn}>
+                    💚 Support via Bit
+                  </a>
                 </div>
 
                 <div style={T.divider} />

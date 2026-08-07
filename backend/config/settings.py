@@ -165,7 +165,8 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 
 # Make sure custom headers don't break preflight
 CORS_ALLOW_HEADERS = list(default_headers) + [
-    "x-user-id",
+     "x-user-id",
+    "x-session-token",
     "authorization",
 ]
 

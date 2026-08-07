@@ -9,6 +9,7 @@ export default function ForgotPasswordPage() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState(""); // ✅ NEW
   const [newPass, setNewPass] = useState("");
   const [newPass2, setNewPass2] = useState("");
 
@@ -26,6 +27,7 @@ export default function ForgotPasswordPage() {
     setMsg("");
 
     const u = username.trim();
+    const em = email.trim();
     if (!u) return setErr("Please enter your username.");
     if (newPass.length < 3) return setErr("Password must be at least 6 characters.");
     if (newPass !== newPass2) return setErr("Passwords do not match.");
@@ -36,6 +38,7 @@ export default function ForgotPasswordPage() {
       // but for a small app you can still return a clear message.
       await axios.post(`${API_BASE}/api/reset-password`, {
         username: u,
+        email: em, // ✅ NEW — only checked server-side if the account has one saved
         new_password: newPass,
       });
 
@@ -64,7 +67,7 @@ export default function ForgotPasswordPage() {
         >
           <div style={{ fontSize: 22, fontWeight: 800, color: "#e2e8f0" }}>Forgot password</div>
           <div style={{ marginTop: 6, color: "#94a3b8", fontSize: 13 }}>
-            Enter your username and choose a new password.
+            Enter your username (and email, if you set one on your profile) and choose a new password.
           </div>
 
           {err && (
@@ -108,6 +111,21 @@ export default function ForgotPasswordPage() {
                 placeholder="your username"
                 style={inputStyle}
                 autoComplete="username"
+              />
+            </label>
+
+            {/* ✅ NEW */}
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={{ color: "#cbd5e1", fontSize: 13 }}>
+                Email
+              </span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                style={inputStyle}
+                autoComplete="email"
               />
             </label>
 

@@ -14,6 +14,7 @@ function fmtDate(x) {
 
 export default function Inbox() {
   const userId = useMemo(() => localStorage.getItem("user_id"), []);
+  const token = useMemo(() => localStorage.getItem("token"), []); // ✅ NEW — needed for session-protected calls
   const [items, setItems] = useState([]);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,10 @@ export default function Inbox() {
     setLoading(true);
 
     try {
-      const res = await axios.get(`${API_BASE}/api/inbox/${userId}`, { timeout: 15000 });
+      const res = await axios.get(`${API_BASE}/api/inbox/${userId}`, {
+        headers: { "X-User-Id": userId, "X-Session-Token": token }, // ✅ NEW — InboxView now requires a valid session
+        timeout: 15000,
+      });
       const arr = Array.isArray(res.data?.items) ? res.data.items : [];
 
       // ensure newest first
@@ -58,7 +62,10 @@ export default function Inbox() {
       const res = await axios.post(
         `${API_BASE}/api/letters/${letterId}/read`,
         { user_id: userId },
-        { timeout: 15000 }
+        {
+          headers: { "X-User-Id": userId, "X-Session-Token": token }, // ✅ NEW — MarkLetterReadView now requires a valid session
+          timeout: 15000,
+        }
       );
 
       const readAt = res.data?.read_at || new Date().toISOString();
@@ -76,6 +83,7 @@ export default function Inbox() {
     try {
       await axios.delete(`${API_BASE}/api/letters/${letterId}`, {
         params: { user_id: userId },
+        headers: { "X-User-Id": userId, "X-Session-Token": token }, // ✅ NEW — DeleteLetterView now requires a valid session
         timeout: 15000,
       });
 
@@ -99,7 +107,6 @@ export default function Inbox() {
       background: "rgba(63, 94, 63, 0.41)",
       borderRadius: 18,
       color: "#111",
-      
     },
     head: {
       display: "grid",
@@ -121,7 +128,6 @@ export default function Inbox() {
       alignItems: "start",
       cursor: "pointer",
       transition: "transform 160ms ease, background 160ms ease",
-      
     },
     dot: {
       width: 8,
@@ -138,15 +144,14 @@ export default function Inbox() {
       background: bg,
       border: "1px solid rgba(255,255,255,0.14)",
       whiteSpace: "nowrap",
-      
       display: "inline-flex",
       alignItems: "center",
       gap: 6,
     }),
     msg: (unread) => ({
       whiteSpace: "pre-wrap",
-      overflow:"hidden",
-      height:50,
+      overflow: "hidden",
+      height: 50,
       opacity: unread ? 1 : 0.88,
       lineHeight: 1.35,
     }),
@@ -164,16 +169,16 @@ export default function Inbox() {
   const showEmptyNice = !loading && !err && items.length === 0;
 
   return (
-    <div style={S.page }>
+    <div style={S.page}>
       <TopBar
-         links={[
-    { to: "/home", label: "Home" },
-    { to: "/profile", label: "My Profile" },
-    { to: "/saved", label: "Saved" },
-    { to: "/random", label: "Let luck choose" },
-    { to: "/latters", label: "Inbox" },
-    { to: "/info", label: "Info & Contact" },
-  ]}
+        links={[
+          { to: "/home", label: "Home" },
+          { to: "/profile", label: "My Profile" },
+          { to: "/saved", label: "Saved" },
+          { to: "/random", label: "Let luck choose" },
+          { to: "/latters", label: "Inbox" },
+          { to: "/info", label: "Info & Contact" },
+        ]}
       />
 
       <main style={{ padding: "14px" }}>
@@ -200,7 +205,7 @@ export default function Inbox() {
 
                 <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
                   {!openLetter.read_at && (
-                    <button type="button" style={S.primaryBtn } onClick={() => markRead(openLetter._id)}>
+                    <button type="button" style={S.primaryBtn} onClick={() => markRead(openLetter._id)}>
                       Mark read
                     </button>
                   )}
@@ -213,10 +218,10 @@ export default function Inbox() {
           </div>
         )}
 
-        <div style={S.shell }>
+        <div style={S.shell}>
           <div style={S.resultsHeader}>
             <div>
-              <div style={S.resultsTitle }>Inbox</div>
+              <div style={S.resultsTitle}>Inbox</div>
               <div style={S.resultsMeta}>
                 {loading ? "Loading…" : `${items.length} message${items.length === 1 ? "" : "s"} • newest first`}
               </div>
@@ -253,7 +258,7 @@ export default function Inbox() {
                   </div>
 
                   <div style={T.msg(false)}>
-                    <div style={{ opacity: 0.75, color:"black" }}>
+                    <div style={{ opacity: 0.75, color: "black" }}>
                       Your inbox is empty. When someone sends you a letter, it will appear here.
                     </div>
                   </div>

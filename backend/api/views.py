@@ -27,28 +27,6 @@ def oid(x):
     return None
 
 
-def serialize_letter(doc):
-    def s_oid(v):
-        return str(v) if isinstance(v, ObjectId) else (str(v) if v else None)
-
-    def s_dt(v):
-        if not v:
-            return None
-        # ensure timezone-aware ISO
-        if isinstance(v, datetime) and v.tzinfo is None:
-            v = v.replace(tzinfo=timezone.utc)
-        return v.isoformat()
-
-    return {
-        "_id": s_oid(doc.get("_id")),
-        "sender_id": s_oid(doc.get("sender_id")),
-        "receiver_id": s_oid(doc.get("receiver_id")),
-        "letter": doc.get("letter", "") or "",
-        "created_at": s_dt(doc.get("created_at")),
-        "read_at": s_dt(doc.get("read_at")),
-    }
-
-
 def serialize_mongo(doc):
     if doc is None:
         return None
@@ -66,6 +44,30 @@ def serialize_mongo(doc):
     return out
 
 
+def require_session(request, users, claimed_user_id):
+    """
+    Verifies the caller actually owns claimed_user_id by checking
+    X-Session-Token against what's stored in Mongo for that user.
+
+    Returns (uid, None) on success, or (None, error_response) on failure.
+    claimed_user_id can come from a URL path segment or the body — either
+    way, it's just an attacker-controlled claim until proven with the token.
+    """
+    uid = oid(claimed_user_id)
+    if not uid:
+        return None, Response({"error": "Invalid user id"}, status=400)
+
+    token = request.headers.get("X-Session-Token")
+    if not token:
+        return None, Response({"error": "Missing session token"}, status=401)
+
+    user = users.find_one({"_id": uid}, {"session_token": 1})
+    if not user or user.get("session_token") != token:
+        return None, Response({"error": "Invalid or expired session"}, status=401)
+
+    return uid, None
+
+
 PROFILE_ALLOWED_FIELDS = {
     "username",
     "name",
@@ -74,12 +76,13 @@ PROFILE_ALLOWED_FIELDS = {
     "city",
     "gender",
     "orientation",
-    "romantic_orientation",  # ✅ NEW
+    "romantic_orientation",
     "looking_for",
     "info",
     "contact",
     "image_url",
-    "image_public_id",      
+    "image_public_id",
+    "email",
 }
 
 
@@ -87,16 +90,6 @@ PROFILE_ALLOWED_FIELDS = {
 # Auth
 # ----------------------------
 class SignUpView(APIView):
-    """
-    POST /api/signup
-    Body: {
-      username, password, name, age,
-      orientation, romantic_orientation,
-      looking_for, image_url, city, gender, info, contact, preference
-    }
-    Creates user and returns token + user_id.
-    """
-
     def post(self, request):
         db = get_db()
         users = db["users"]
@@ -116,11 +109,9 @@ class SignUpView(APIView):
         except Exception:
             return Response({"error": "age must be a number"}, status=400)
 
-        # ✅ default preference to empty string
         preference = (data.get("preference") or "").strip()
-
-        # ✅ NEW: romantic orientation default to empty string
         romantic_orientation = (data.get("romantic_orientation") or "").strip()
+        email = (data.get("email") or "").strip().lower()
 
         now = datetime.utcnow()
         token = str(uuid4())
@@ -137,15 +128,16 @@ class SignUpView(APIView):
             "preference": preference,
 
             "orientation": (data.get("orientation") or "").strip() or None,
-            "romantic_orientation": romantic_orientation,  # ✅ NEW
+            "romantic_orientation": romantic_orientation,
 
             "looking_for": (data.get("looking_for") or "").strip() or None,
             "image_url": data.get("image_url"),
-            "image_public_id": data.get("image_public_id"),  # optional if you ever send it on signup
+            "image_public_id": data.get("image_public_id"),
             "city": data.get("city"),
             "gender": data.get("gender"),
             "info": data.get("info"),
             "contact": data.get("contact"),
+            "email": email,
 
             "liked": [],
         }
@@ -158,12 +150,6 @@ class SignUpView(APIView):
 
 
 class LoginView(APIView):
-    """
-    POST /api/login
-    Body: { username, password }
-    Returns token + user_id.
-    """
-
     def post(self, request):
         db = get_db()
         users = db["users"]
@@ -193,19 +179,15 @@ class LoginView(APIView):
             status=200,
         )
 
-class ResetPasswordView(APIView):
-    """
-    POST /api/auth/reset-password
-    Body: { username, new_password }
-    Resets password for username (no email flow).
-    """
 
+class ResetPasswordView(APIView):
     def post(self, request):
         db = get_db()
         users = db["users"]
 
         data = request.data or {}
         username = (data.get("username") or "").strip()
+        email = (data.get("email") or "").strip().lower()
         new_password = data.get("new_password") or ""
 
         if not username or not new_password:
@@ -216,10 +198,14 @@ class ResetPasswordView(APIView):
 
         user = users.find_one({"username": username})
         if not user:
-            # (safer) don't reveal if username exists
             return Response({"message": "If the user exists, password was updated"}, status=200)
 
-        token = str(uuid4())  # force re-login everywhere
+        stored_email = (user.get("email") or "").strip().lower()
+
+        if stored_email and email != stored_email:
+            return Response({"error": "Email does not match our records"}, status=403)
+
+        token = str(uuid4())
         users.update_one(
             {"_id": user["_id"]},
             {"$set": {
@@ -230,6 +216,7 @@ class ResetPasswordView(APIView):
         )
 
         return Response({"message": "Password updated"}, status=status.HTTP_200_OK)
+
 
 class PingView(APIView):
     def get(self, request):
@@ -252,7 +239,6 @@ class ProfilesListView(APIView):
 
         cursor = request.query_params.get("cursor")
 
-        # ---------- identify viewer ----------
         viewer_id = request.headers.get("X-User-Id") or request.query_params.get("viewer_id")
         viewer_oid = oid(viewer_id) if viewer_id else None
 
@@ -261,7 +247,6 @@ class ProfilesListView(APIView):
             viewer_doc = users.find_one({"_id": viewer_oid}, {"gender": 1})
             viewer_gender = (viewer_doc.get("gender") if viewer_doc else None)
 
-        # ---------- base query ----------
         q = {}
 
         if cursor:
@@ -269,7 +254,6 @@ class ProfilesListView(APIView):
             if c:
                 q["_id"] = {"$gt": c}
 
-        # exclude self if we know viewer
         if viewer_oid:
             q["_id"] = q.get("_id", {})
             if isinstance(q["_id"], dict):
@@ -277,7 +261,6 @@ class ProfilesListView(APIView):
             else:
                 q["_id"] = {"$ne": viewer_oid}
 
-        # ---------- preference filter ----------
         if viewer_gender in {"Woman", "Man", "Non-binary", "Other"}:
             q["$or"] = [
                 {"preference": viewer_gender},
@@ -287,7 +270,6 @@ class ProfilesListView(APIView):
                 {"preference": {"$exists": False}},
             ]
 
-        # ---------- projection ----------
         projection = {
             "password_hash": 0,
             "session_token": 0,
@@ -368,13 +350,11 @@ class ProfileView(APIView):
         db = get_db()
         users = db["users"]
 
-        uid = oid(user_id)
-        if not uid:
-            return Response({"error": "Invalid user id"}, status=400)
-
-        requester_id = request.headers.get("X-User-Id") or request.data.get("user_id")
-        if requester_id and str(requester_id) != str(user_id):
-            return Response({"error": "Not allowed"}, status=403)
+        # ✅ FIXED: real session-token check instead of comparing two
+        # attacker-controlled values against each other
+        uid, err = require_session(request, users, user_id)
+        if err:
+            return err
 
         data = request.data or {}
         update_fields = {k: data.get(k) for k in PROFILE_ALLOWED_FIELDS if k in data}
@@ -385,20 +365,21 @@ class ProfileView(APIView):
             except Exception:
                 return Response({"error": "Age must be a number"}, status=400)
 
-        # normalize preference like signup: allow "any" to become ""
         if "preference" in update_fields and update_fields["preference"] is not None:
             pref = str(update_fields["preference"]).strip()
             update_fields["preference"] = "" if pref == "any" else pref
 
-        # ✅ NEW: normalize romantic orientation (ensure it's string)
         if "romantic_orientation" in update_fields and update_fields["romantic_orientation"] is not None:
             update_fields["romantic_orientation"] = str(update_fields["romantic_orientation"]).strip()
 
+        if "email" in update_fields and update_fields["email"] is not None:
+            update_fields["email"] = str(update_fields["email"]).strip().lower()
+
         update_fields["updated_at"] = datetime.utcnow()
         try:
-         users.update_one({"_id": uid}, {"$set": update_fields})
+            users.update_one({"_id": uid}, {"$set": update_fields})
         except DuplicateKeyError:
-         return Response({"error": "Username already exists"}, status=409)
+            return Response({"error": "Username already exists"}, status=409)
         doc = users.find_one({"_id": uid}, {"password_hash": 0, "session_token": 0, "liked": 0})
         return Response(serialize_mongo(doc), status=200)
 
@@ -426,7 +407,6 @@ from .mongo import get_db
 
 
 class LikesView(APIView):
-    # GET /api/likes/<user_id>
     def get(self, request, user_id, profile_id=None):
         db = get_db()
         users = db["users"]
@@ -438,7 +418,6 @@ class LikesView(APIView):
         me = users.find_one({"_id": uid}, {"liked": 1})
         liked_raw = (me or {}).get("liked", [])
 
-        # return as strings
         liked = []
         for x in liked_raw:
             if isinstance(x, ObjectId):
@@ -450,15 +429,17 @@ class LikesView(APIView):
 
         return Response({"liked": liked}, status=status.HTTP_200_OK)
 
-    # POST /api/likes/<user_id>/<profile_id>
     def post(self, request, user_id, profile_id):
         db = get_db()
         users = db["users"]
 
-        uid = oid(user_id)
-        pid = oid(profile_id)
+        # ✅ FIXED: only the real session owner can like on behalf of user_id
+        uid, err = require_session(request, users, user_id)
+        if err:
+            return err
 
-        if not uid or not pid:
+        pid = oid(profile_id)
+        if not pid:
             return Response({"error": "Invalid id"}, status=status.HTTP_400_BAD_REQUEST)
         if uid == pid:
             return Response({"error": "Cannot like yourself"}, status=status.HTTP_400_BAD_REQUEST)
@@ -472,15 +453,17 @@ class LikesView(APIView):
 
         return Response({"ok": True}, status=status.HTTP_200_OK)
 
-    # DELETE /api/likes/<user_id>/<profile_id>
     def delete(self, request, user_id, profile_id):
         db = get_db()
         users = db["users"]
 
-        uid = oid(user_id)
-        pid = oid(profile_id)
+        # ✅ FIXED
+        uid, err = require_session(request, users, user_id)
+        if err:
+            return err
 
-        if not uid or not pid:
+        pid = oid(profile_id)
+        if not pid:
             return Response({"error": "Invalid id"}, status=status.HTTP_400_BAD_REQUEST)
 
         res = users.update_one(
@@ -491,31 +474,26 @@ class LikesView(APIView):
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
         return Response({"ok": True}, status=status.HTTP_200_OK)
-#======================================================================================Latters            
-class WriteLatterView(APIView):
-    """
-    POST /api/writelatter/<user_id>/<profile_id>
-    Body: { "letter": "..." }
-    Saves one introduction letter from sender(user_id) to receiver(profile_id).
-    """
 
+#======================================================================================Latters
+class WriteLatterView(APIView):
     def post(self, request, user_id, profile_id):
         db = get_db()
         letters = db["letters"]
         users = db["users"]
 
-        sender = oid(user_id)
-        receiver = oid(profile_id)
+        # ✅ FIXED: only the real session owner can send as user_id
+        sender, err = require_session(request, users, user_id)
+        if err:
+            return err
 
-        if not sender or not receiver:
-            return Response({"error": "Invalid user id / profile id"}, status=400)
+        receiver = oid(profile_id)
+        if not receiver:
+            return Response({"error": "Invalid profile id"}, status=400)
 
         if sender == receiver:
             return Response({"error": "You can't send a letter to yourself"}, status=400)
 
-        # ensure both users exist
-        if not users.find_one({"_id": sender}, {"_id": 1}):
-            return Response({"error": "Sender not found"}, status=404)
         if not users.find_one({"_id": receiver}, {"_id": 1}):
             return Response({"error": "Receiver not found"}, status=404)
 
@@ -525,7 +503,6 @@ class WriteLatterView(APIView):
         if len(letter) > 2000:
             return Response({"error": "Letter is too long (max 2000)"}, status=400)
 
-        # Optional: only one letter per pair
         existing = letters.find_one({"sender_id": sender, "receiver_id": receiver})
         if existing:
             return Response({"error": "You already sent a letter to this user"}, status=409)
@@ -540,31 +517,27 @@ class WriteLatterView(APIView):
         inserted_id = letters.insert_one(doc).inserted_id
 
         return Response({"ok": True, "letter_id": str(inserted_id)}, status=status.HTTP_201_CREATED)
-    
+
+
 class InboxView(APIView):
-    """
-    GET /api/inbox/<user_id>
-    Returns letters received (newest first), includes sender username.
-    """
     def get(self, request, user_id):
         db = get_db()
         letters = db["letters"]
         users = db["users"]
 
-        uid = oid(user_id)
-        if not uid:
-            return Response({"items": []}, status=200)
+        # ✅ FIXED: your inbox is private, only you should read it
+        uid, err = require_session(request, users, user_id)
+        if err:
+            return err
 
         docs = list(letters.find({"receiver_id": uid}).sort("created_at", -1).limit(200))
 
-        # collect sender ids
         sender_ids = []
         for d in docs:
             sid = d.get("sender_id")
             if sid:
                 sender_ids.append(sid)
 
-        # fetch usernames in one query
         sender_map = {}
         if sender_ids:
             sender_profiles = users.find(
@@ -576,27 +549,29 @@ class InboxView(APIView):
 
         out = []
         for d in docs:
-            item = serialize_letter(d)
+            item = serialize_mongo(d)
             sid = item.get("sender_id")
             item["sender_username"] = sender_map.get(str(sid), "Unknown")
             out.append(item)
 
         return Response({"items": out}, status=200)
-    
+
+
 class MarkLetterReadView(APIView):
-    # POST /api/letters/<letter_id>/read
     def post(self, request, letter_id):
         db = get_db()
         letters = db["letters"]
+        users = db["users"]
+
+        claimed_user_id = request.data.get("user_id")
+        # ✅ FIXED: verify session before trusting the claimed user_id
+        uid, err = require_session(request, users, claimed_user_id)
+        if err:
+            return err
 
         lid = oid(letter_id)
         if not lid:
             return Response({"error": "Invalid letter id"}, status=400)
-
-        # optional: make sure only receiver can mark read
-        uid = oid(request.data.get("user_id"))
-        if not uid:
-            return Response({"error": "Invalid user id"}, status=400)
 
         doc = letters.find_one({"_id": lid})
         if not doc:
@@ -605,38 +580,59 @@ class MarkLetterReadView(APIView):
         if doc.get("receiver_id") != uid:
             return Response({"error": "Not allowed"}, status=403)
 
-        now = datetime.now(timezone.utc)  # "today's date" stored as UTC ISO
+        now = datetime.now(timezone.utc)
         letters.update_one(
             {"_id": lid},
             {"$set": {"read_at": now}}
         )
 
         return Response({"ok": True, "read_at": now.isoformat()}, status=200)
-    
+
+
 class DeleteLetterView(APIView):
-    # DELETE /api/letters/<letter_id>?user_id=<receiver_id>
     def delete(self, request, letter_id):
         db = get_db()
         letters = db["letters"]
+        users = db["users"]
+
+        claimed_user_id = request.query_params.get("user_id")
+        # ✅ FIXED
+        uid, err = require_session(request, users, claimed_user_id)
+        if err:
+            return err
 
         lid = oid(letter_id)
         if not lid:
             return Response({"error": "Invalid letter id"}, status=400)
 
-        uid = oid(request.query_params.get("user_id"))
-        if not uid:
-            return Response({"error": "Invalid user id"}, status=400)
-
         doc = letters.find_one({"_id": lid})
         if not doc:
             return Response({"error": "Letter not found"}, status=404)
 
-        # only receiver can delete
         if doc.get("receiver_id") != uid:
             return Response({"error": "Not allowed"}, status=403)
 
         letters.delete_one({"_id": lid})
         return Response({"ok": True}, status=200)
+
+
+class VerifySessionView(APIView):
+    def get(self, request):
+        db = get_db()
+        users = db["users"]
+
+        user_id = request.headers.get("X-User-Id")
+        token = request.headers.get("X-Session-Token")
+
+        uid = oid(user_id)
+        if not uid or not token:
+            return Response({"valid": False}, status=401)
+
+        user = users.find_one({"_id": uid}, {"session_token": 1})
+        if not user or user.get("session_token") != token:
+            return Response({"valid": False}, status=401)
+
+        return Response({"valid": True}, status=200)
 
 
 HEALTH_URL = "https://acedating-new.onrender.com/api/health"
@@ -649,3 +645,38 @@ class health(APIView):
 
     def get(self, request):
         return Response({"ok": True})
+    
+class LikedByView(APIView):
+    """
+    GET /api/likedby/<user_id>
+    Headers: X-Session-Token (must belong to user_id)
+
+    Returns every user who has saved/liked this profile — i.e. every user
+    document whose "liked" array contains user_id.
+    Private by design: only the account owner can see who saved them.
+    """
+
+    def get(self, request, user_id):
+        db = get_db()
+        users = db["users"]
+
+        # Only the profile owner can see who saved them
+        uid, err = require_session(request, users, user_id)
+        if err:
+            return err
+
+        # find every user doc whose "liked" array contains this uid
+        docs = list(
+            users.find(
+                {"liked": uid},
+                {"password_hash": 0, "session_token": 0, "liked": 0},
+            )
+        )
+
+        return Response(
+            {
+                "count": len(docs),
+                "items": [serialize_mongo(d) for d in docs],
+            },
+            status=200,
+        )

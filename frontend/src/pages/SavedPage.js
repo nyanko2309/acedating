@@ -1,14 +1,11 @@
-// src/pages/Homepage.js
-
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
-import TopBar from "./TopBar";
 import { useNavigate } from "react-router-dom";
+import TopBar from "./TopBar";
 import { S, ensureHomepageStyles, PLACEHOLDER_AVATAR_URL } from "./homepageStyles";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 
-const PAGE_SIZE = 24;
 const ORIENTATION_OPTIONS = ["Ace", "Aro", "Aroace", "Demi", "Grey-asexual"];
 const LOOKING_FOR_OPTIONS = ["Friendship", "Monogamy-romance", "Qpr", "Polyamory-romance"];
 const GENDER_OPTIONS = ["Man", "Woman", "Non-binary", "Other"];
@@ -119,7 +116,8 @@ function MultiSelect({ label, options, valueSet, onChangeSet, placeholder = "Any
   );
 }
 
-function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
+function ProfileCard({ p, isFav, isMatch, onToggleFav, onOpenImage }) {
+  const navigate = useNavigate();
   const [imgOk, setImgOk] = useState(true);
 
   const fallback = `${PLACEHOLDER_AVATAR_URL}&seed=${encodeURIComponent(p.username || "Ace")}`;
@@ -156,6 +154,34 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
           title={isFav ? "Unfavorite" : "Favorite"}
         >
           {isFav ? "★" : "☆"}
+        </button>
+      </div>
+
+      {/* Match badge — only shown when it's mutual */}
+      {isMatch && (
+        <div style={{ padding: "0 14px" }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "4px 10px",
+              borderRadius: 999,
+              background: "rgba(236,72,153,0.18)",
+              border: "1px solid rgba(236,72,153,0.4)",
+              color: "#fbcfe8",
+              fontSize: 12,
+              fontWeight: 900,
+            }}
+          >
+            💘 It's a match — they saved you too
+          </span>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 10, padding: "10px 14px 14px" }}>
+        <button type="button" style={S.secondaryBtn} onClick={() => navigate(`/writelatter/${p._id}`)}>
+          Write a massage
         </button>
       </div>
 
@@ -202,15 +228,16 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
 export default function Savedpage() {
   const navigate = useNavigate();
   const myId = useMemo(() => String(localStorage.getItem("user_id") || ""), []);
+  const token = useMemo(() => localStorage.getItem("token"), []); // needed for session-protected calls
 
   useEffect(() => {
     ensureHomepageStyles();
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const t = localStorage.getItem("token");
     const userId = localStorage.getItem("user_id");
-    if (!token || !userId) navigate("/", { replace: true }); // your login route is "/"
+    if (!t || !userId) navigate("/", { replace: true }); // your login route is "/"
   }, [navigate]);
 
   // Lightbox (big image)
@@ -226,7 +253,7 @@ export default function Savedpage() {
   // Data + pagination
   const [profiles, setProfiles] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
-  
+
   // Search
   const [q, setQ] = useState("");
 
@@ -240,53 +267,86 @@ export default function Savedpage() {
   const [ageMin, setAgeMin] = useState("");
   const [ageMax, setAgeMax] = useState("");
 
-  // Favorites (local-only MVP)
-// ✅ Likes from Mongo
-const [likedIds, setLikedIds] = useState(() => new Set());
+  // Matches toggle
+  const [matchesOnly, setMatchesOnly] = useState(false);
+  const [matchIds, setMatchIds] = useState(() => new Set());
+  const [matchesLoading, setMatchesLoading] = useState(true);
 
-useEffect(() => {
-  if (!myId) return;
+  // Favorites, from Mongo
+  const [likedIds, setLikedIds] = useState(() => new Set());
 
-  (async () => {
-    try {
-      const res = await axios.get(`${API_BASE}/api/likes/${myId}`);
-      const liked = Array.isArray(res.data?.liked) ? res.data.liked : [];
-      setLikedIds(new Set(liked.map(String)));
-    } catch (e) {
-      console.error("Failed to load liked ids", e);
-      setLikedIds(new Set());
+  useEffect(() => {
+    if (!myId) return;
+
+    (async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/api/likes/${myId}`);
+        const liked = Array.isArray(res.data?.liked) ? res.data.liked : [];
+        setLikedIds(new Set(liked.map(String)));
+      } catch (e) {
+        console.error("Failed to load liked ids", e);
+        setLikedIds(new Set());
+      }
+    })();
+  }, [myId]);
+
+  // Who has saved me back — used for the match badge and the "matches only" filter.
+  // Session-protected on the backend, so only the account owner can ever see this.
+  const fetchMatches = async () => {
+    if (!myId || !token) {
+      setMatchesLoading(false);
+      return;
     }
-  })();
-}, [myId]);
+    setMatchesLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE}/api/likedby/${myId}`, {
+        headers: { "X-User-Id": myId, "X-Session-Token": token },
+      });
+      const items = Array.isArray(res.data?.items) ? res.data.items : [];
+      setMatchIds(new Set(items.map((p) => String(p._id))));
+    } catch (e) {
+      console.error("Failed to load who saved you", e);
+      setMatchIds(new Set());
+    } finally {
+      setMatchesLoading(false);
+    }
+  };
 
- const fetchSaved = async () => {
-  try {
-    setInitialLoading(true);
-    const res = await axios.get(`${API_BASE}/api/profilessaved/${myId}`);
-    console.log("Res items:", res);
-    const items = Array.isArray(res.data?.items) ? res.data.items : [];
-    setProfiles(items);
-    console.log("SAVED items:", items);
-  } catch (e) {
-    console.error(e);
-    setProfiles([]);
-    
-  } finally {
-    setInitialLoading(false);
-  }
-};
+  useEffect(() => {
+    if (!myId) return;
+    fetchMatches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myId]);
 
-useEffect(() => {
-  if (!myId) return;
-  fetchSaved();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [myId]);
+  const fetchSaved = async () => {
+    try {
+      setInitialLoading(true);
+      const res = await axios.get(`${API_BASE}/api/profilessaved/${myId}`);
+      const items = Array.isArray(res.data?.items) ? res.data.items : [];
+      setProfiles(items);
+    } catch (e) {
+      console.error(e);
+      setProfiles([]);
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!myId) return;
+    fetchSaved();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myId]);
 
   const filtered = useMemo(() => {
     const qq = normalizeText(q).trim();
 
     return profiles.filter((p) => {
-     if (myId && String(p._id) === myId) return false;
+      if (myId && String(p._id) === myId) return false;
+
+      // Matches-only filter
+      if (matchesOnly && !matchIds.has(String(p._id))) return false;
+
       const pCity = (p.city ?? "").toString();
       const pOri = (p.orientation ?? "").toString();
       const pLF = (p.looking_for ?? "").toString();
@@ -310,41 +370,52 @@ useEffect(() => {
 
       return true;
     });
-  }, [profiles, q, citySet, orientationSet, lookingForSet, genderSet, ageMin, ageMax]);
+  }, [profiles, q, citySet, orientationSet, lookingForSet, genderSet, ageMin, ageMax, matchesOnly, matchIds]);
 
   const totalPosts = filtered.length;
 
+  const matchCount = useMemo(
+    () => profiles.filter((p) => matchIds.has(String(p._id))).length,
+    [profiles, matchIds]
+  );
+
   const toggleFavorite = async (profileId) => {
-  if (!myId) return;
+    if (!myId) return;
 
-  const pid = String(profileId);
-  const alreadyLiked = likedIds.has(pid);
+    const pid = String(profileId);
+    const alreadyLiked = likedIds.has(pid);
 
-  // optimistic UI
-  setLikedIds((prev) => {
-    const next = new Set(prev);
-    if (alreadyLiked) next.delete(pid);
-    else next.add(pid);
-    return next;
-  });
-
-  try {
-    if (alreadyLiked) {
-      await axios.delete(`${API_BASE}/api/likes/${myId}/${pid}`);
-    } else {
-      await axios.post(`${API_BASE}/api/likes/${myId}/${pid}`);
-    }
-  } catch (e) {
-    console.error(e);
-    // rollback
+    // optimistic UI
     setLikedIds((prev) => {
       const next = new Set(prev);
-      if (alreadyLiked) next.add(pid);
-      else next.delete(pid);
+      if (alreadyLiked) next.delete(pid);
+      else next.add(pid);
       return next;
     });
-  }
-};
+
+    try {
+      const headers = { "X-User-Id": myId, "X-Session-Token": token }; // required by the backend now
+      if (alreadyLiked) {
+        await axios.delete(`${API_BASE}/api/likes/${myId}/${pid}`, { headers });
+      } else {
+        await axios.post(`${API_BASE}/api/likes/${myId}/${pid}`, {}, { headers });
+      }
+
+      // this page shows "people I've saved" — if unsaved, drop it from the list too
+      if (alreadyLiked) {
+        setProfiles((prev) => prev.filter((p) => String(p._id) !== pid));
+      }
+    } catch (e) {
+      console.error(e);
+      // rollback
+      setLikedIds((prev) => {
+        const next = new Set(prev);
+        if (alreadyLiked) next.add(pid);
+        else next.delete(pid);
+        return next;
+      });
+    }
+  };
 
   const clearFilters = () => {
     setQ("");
@@ -354,6 +425,7 @@ useEffect(() => {
     setGenderSet(new Set());
     setAgeMin("");
     setAgeMax("");
+    setMatchesOnly(false);
   };
 
   const cityOptions = useMemo(() => CITY_OPTIONS, []);
@@ -364,159 +436,196 @@ useEffect(() => {
   );
   const genderOptions = useMemo(() => GENDER_OPTIONS.map((x) => ({ value: x, label: x.replaceAll("-", " ") })), []);
 
-return (
-  <div style={S.page}>
-    <TopBar
-  links={[
-    { to: "/home", label: "Home" },
-    { to: "/profile", label: "My Profile" },
-    { to: "/saved", label: "Saved" },
-    { to: "/random", label: "Let luck choose" },
-    { to: "/latters", label: "Inbox" },
-    { to: "/info", label: "Info & Contact" },
-  ]}
-  />
+  return (
+    <div style={S.page}>
+      <TopBar
+        links={[
+          { to: "/home", label: "Home" },
+          { to: "/profile", label: "My Profile" },
+          { to: "/saved", label: "Saved" },
+          { to: "/random", label: "Let luck choose" },
+          { to: "/latters", label: "Inbox" },
+          { to: "/info", label: "Info & Contact" },
+        ]}
+      />
 
-    <main style={{ padding: "14px" }}>
-      {/* Lightbox */}
-      {lightbox && (
-        <div style={S.overlay} onMouseDown={() => setLightbox(null)}>
-          <div style={S.modal} onMouseDown={(e) => e.stopPropagation()}>
-            <div style={S.modalTop}>
-              <div style={S.modalTitle}>{lightbox.title || "Profile image"}</div>
-              <button
-                type="button"
-                style={S.modalClose}
-                onClick={() => setLightbox(null)}
-                aria-label="Close"
-              >
-                ×
+      <main style={{ padding: "14px" }}>
+        {/* Lightbox */}
+        {lightbox && (
+          <div style={S.overlay} onMouseDown={() => setLightbox(null)}>
+            <div style={S.modal} onMouseDown={(e) => e.stopPropagation()}>
+              <div style={S.modalTop}>
+                <div style={S.modalTitle}>{lightbox.title || "Profile image"}</div>
+                <button
+                  type="button"
+                  style={S.modalClose}
+                  onClick={() => setLightbox(null)}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={S.modalBody}>
+                <div style={S.modalImgWrap}>
+                  <img src={lightbox.url} alt="profile large" style={S.modalImg} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={S.shell}>
+          {/* Filters card */}
+          <div style={S.filtersCard}>
+            <div style={S.filtersHeader}>
+              <div>
+                <div style={S.filtersTitle}>Search & Filters</div>
+                <div style={S.filtersHint}>
+                  All filters are multi-select. If you pick none, it means “any”.
+                </div>
+              </div>
+
+              <button type="button" style={S.secondaryBtn} onClick={clearFilters}>
+                Clear all
               </button>
             </div>
 
-            <div style={S.modalBody}>
-              <div style={S.modalImgWrap}>
-                <img src={lightbox.url} alt="profile large" style={S.modalImg} />
+            {/* Matches toggle row */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginTop: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setMatchesOnly((v) => !v)}
+                style={{
+                  ...S.secondaryBtn,
+                  ...(matchesOnly
+                    ? {
+                        background: "rgba(236,72,153,0.22)",
+                        border: "1px solid rgba(236,72,153,0.5)",
+                        color: "#fbcfe8",
+                      }
+                    : null),
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+                title="Show only people who saved you back"
+              >
+                💘 {matchesOnly ? "Showing matches" : "Show matches only"}
+                {!matchesLoading ? ` (${matchCount})` : ""}
+              </button>
+              <span style={{ fontSize: 12, opacity: 0.7 }}>
+                A match means you saved each other.
+              </span>
+            </div>
+
+            <div style={S.filtersGrid}>
+              <div style={S.searchWrap}>
+                <div style={S.msLabel}>Search</div>
+                <div style={S.searchRow}>
+                  <input
+                    style={S.searchInput}
+                    placeholder="type… (name, city, info, contact, etc)"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                  />
+                  <button type="button" style={S.primaryBtn} onClick={() => {}}>
+                    Search
+                  </button>
+                </div>
+              </div>
+
+              <MultiSelect label="City / Area" options={cityOptions} valueSet={citySet} onChangeSet={setCitySet} placeholder="Any area" />
+              <MultiSelect label="Orientation" options={orientationOptions} valueSet={orientationSet} onChangeSet={setOrientationSet} placeholder="Any orientation" />
+              <MultiSelect label="Looking for" options={lookingForOptions} valueSet={lookingForSet} onChangeSet={setLookingForSet} placeholder="Any" />
+              <MultiSelect label="Gender" options={genderOptions} valueSet={genderSet} onChangeSet={setGenderSet} placeholder="Any" />
+
+              <div style={S.ageWrap}>
+                <div style={S.msLabel}>Age range</div>
+                <div style={S.ageRow}>
+                  <input
+                    style={S.ageInput}
+                    type="number"
+                    min="18"
+                    max="120"
+                    value={ageMin}
+                    onChange={(e) =>
+                      setAgeMin(e.target.value === "" ? "" : String(clampNum(e.target.value, 18, 120)))
+                    }
+                  />
+                  <span style={S.ageDash}>—</span>
+                  <input
+                    style={S.ageInput}
+                    type="number"
+                    min="18"
+                    max="120"
+                    value={ageMax}
+                    onChange={(e) =>
+                      setAgeMax(e.target.value === "" ? "" : String(clampNum(e.target.value, 18, 120)))
+                    }
+                  />
+                </div>
+                <div style={S.ageHint}>Tip: set only min or max if you want</div>
               </div>
             </div>
           </div>
+
+          {/* Results */}
+          <div style={S.resultsHeader}>
+            <div style={S.resultsTitle}>Results</div>
+            <div style={S.resultsMeta}>
+              {initialLoading ? "Fetching profiles…" : `Showing ${totalPosts} of ${profiles.length}`}
+            </div>
+          </div>
+
+          {initialLoading ? (
+            <div style={S.loadingBox}>
+              <div style={S.spinner} />
+              <div>Loading…</div>
+            </div>
+          ) : filtered.length ? (
+            <>
+              <div style={S.grid} className="__hp_grid__">
+                {filtered.map((p) => (
+                  <ProfileCard
+                    key={p._id}
+                    p={p}
+                    isFav={likedIds.has(String(p._id))}
+                    isMatch={matchIds.has(String(p._id))}
+                    onToggleFav={() => toggleFavorite(p._id)}
+                    onOpenImage={(url) =>
+                      setLightbox({
+                        url,
+                        title: p.name ? `${p.name} (@${p.username})` : `@${p.username}`,
+                      })
+                    }
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div style={S.empty}>
+              <div style={S.emptyTitle}>{matchesOnly ? "No matches yet" : "No matches"}</div>
+              <div style={S.emptyText}>
+                {matchesOnly
+                  ? "Nobody you saved has saved you back yet — check back later!"
+                  : "Try clearing some filters, widening the age range, or searching fewer words."}
+              </div>
+              <button type="button" style={S.secondaryBtn} onClick={clearFilters}>
+                Clear all filters
+              </button>
+            </div>
+          )}
         </div>
-      )}
-
-
-      <div style={S.shell}>
-        {/* Filters card */}
-        <div style={S.filtersCard}>
-          <div style={S.filtersHeader}>
-            <div>
-              <div style={S.filtersTitle}>Search & Filters</div>
-              <div style={S.filtersHint}>
-                All filters are multi-select. If you pick none, it means “any”.
-              </div>
-            </div>
-
-            <button type="button" style={S.secondaryBtn} onClick={clearFilters}>
-              Clear all
-            </button>
-          </div>
-
-          <div style={S.filtersGrid}>
-            <div style={S.searchWrap}>
-              <div style={S.msLabel}>Search</div>
-              <div style={S.searchRow}>
-                <input
-                  style={S.searchInput}
-                  placeholder="type… (name, city, info, contact, etc)"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                />
-                <button type="button" style={S.primaryBtn} onClick={() => {}}>
-                  Search
-                </button>
-              </div>
-            </div>
-
-            <MultiSelect label="City / Area" options={cityOptions} valueSet={citySet} onChangeSet={setCitySet} placeholder="Any area" />
-            <MultiSelect label="Orientation" options={orientationOptions} valueSet={orientationSet} onChangeSet={setOrientationSet} placeholder="Any orientation" />
-            <MultiSelect label="Looking for" options={lookingForOptions} valueSet={lookingForSet} onChangeSet={setLookingForSet} placeholder="Any" />
-            <MultiSelect label="Gender" options={genderOptions} valueSet={genderSet} onChangeSet={setGenderSet} placeholder="Any" />
-
-            <div style={S.ageWrap}>
-              <div style={S.msLabel}>Age range</div>
-              <div style={S.ageRow}>
-                <input
-                  style={S.ageInput}
-                  type="number"
-                  min="18"
-                  max="120"
-                  value={ageMin}
-                  onChange={(e) =>
-                    setAgeMin(e.target.value === "" ? "" : String(clampNum(e.target.value, 18, 120)))
-                  }
-                />
-                <span style={S.ageDash}>—</span>
-                <input
-                  style={S.ageInput}
-                  type="number"
-                  min="18"
-                  max="120"
-                  value={ageMax}
-                  onChange={(e) =>
-                    setAgeMax(e.target.value === "" ? "" : String(clampNum(e.target.value, 18, 120)))
-                  }
-                />
-              </div>
-              <div style={S.ageHint}>Tip: set only min or max if you want</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Results */}
-        <div style={S.resultsHeader}>
-          <div style={S.resultsTitle}>Results</div>
-          <div style={S.resultsMeta}>
-            {initialLoading ? "Fetching profiles…" : `Showing ${totalPosts} of ${profiles.length}`}
-          </div>
-        </div>
-
-        {initialLoading ? (
-          <div style={S.loadingBox}>
-            <div style={S.spinner} />
-            <div>Loading…</div>
-          </div>
-        ) : filtered.length ? (
-          <>
-            <div style={S.grid} className="__hp_grid__">
-              {filtered.map((p) => (
-                <ProfileCard
-                  key={p._id}
-                  p={p}
-                  isFav={likedIds.has(String(p._id))}
-                  onToggleFav={() => toggleFavorite(p._id)}
-                  onOpenImage={(url) =>
-                    setLightbox({
-                      url,
-                      title: p.name ? `${p.name} (@${p.username})` : `@${p.username}`,
-                    })
-                  }
-                />
-              ))}
-            </div>
-
-          </>
-        ) : (
-          <div style={S.empty}>
-            <div style={S.emptyTitle}>No matches</div>
-            <div style={S.emptyText}>
-              Try clearing some filters, widening the age range, or searching fewer words.
-            </div>
-            <button type="button" style={S.secondaryBtn} onClick={clearFilters}>
-              Clear all filters
-            </button>
-          </div>
-        )}
-      </div>
-    </main>
-  </div>
-);
+      </main>
+    </div>
+  );
 }

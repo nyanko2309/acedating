@@ -6,6 +6,55 @@ import { S, ensureHomepageStyles, PLACEHOLDER_AVATAR_URL } from "./homepageStyle
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 
+/** ✅ NEW — small fun popup shown when a mutual like happens */
+function MatchCelebration({ show, name, onClose }) {
+  useEffect(() => {
+    if (!show) return;
+    const t = setTimeout(onClose, 2200);
+    return () => clearTimeout(t);
+  }, [show, onClose]);
+
+  if (!show) return null;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0,0,0,0.45)",
+        cursor: "pointer",
+      }}
+    >
+      <style>{`
+        @keyframes matchPop { 0% { transform: scale(0.6); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
+      `}</style>
+      <div
+        style={{
+          background: "linear-gradient(135deg, rgba(236,72,153,0.95), rgba(168,85,247,0.95))",
+          borderRadius: 24,
+          padding: "28px 34px",
+          textAlign: "center",
+          color: "white",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+          animation: "matchPop 420ms cubic-bezier(.34,1.56,.64,1)",
+        }}
+      >
+        <div style={{ fontSize: 44, marginBottom: 6 }}>💘✨</div>
+        <div style={{ fontSize: 22, fontWeight: 900 }}>It's a match!</div>
+        <div style={{ fontSize: 13, opacity: 0.9, marginTop: 6 }}>
+          {name ? `You and ${name} saved each other` : "You saved each other"}
+        </div>
+        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 10 }}>(tap anywhere to close)</div>
+      </div>
+    </div>
+  );
+}
+
 function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
   const navigate = useNavigate();
   const [imgOk, setImgOk] = useState(true);
@@ -132,6 +181,9 @@ export default function Homepage() {
   // Favorites
   const [likedIds, setLikedIds] = useState(() => new Set());
 
+  // ✅ NEW — match celebration popup state
+  const [matchCelebration, setMatchCelebration] = useState(null); // { name } | null
+
   useEffect(() => {
     if (!myId) return;
 
@@ -193,13 +245,15 @@ export default function Homepage() {
     setShown(next);
   };
 
-  const toggleFavorite = async (profileId) => {
+  // ✅ CHANGED — accepts profileName so the popup can say who you matched with,
+  // and reads res.data.match from the backend to know whether to celebrate.
+  const toggleFavorite = async (profileId, profileName) => {
     if (!myId) return;
 
+    const token = localStorage.getItem("token");
     const pid = String(profileId);
     const alreadyLiked = likedIds.has(pid);
 
-    // optimistic UI
     setLikedIds((prev) => {
       const next = new Set(prev);
       if (alreadyLiked) next.delete(pid);
@@ -208,14 +262,17 @@ export default function Homepage() {
     });
 
     try {
+      const headers = { "X-User-Id": myId, "X-Session-Token": token };
       if (alreadyLiked) {
-        await axios.delete(`${API_BASE}/api/likes/${myId}/${pid}`);
+        await axios.delete(`${API_BASE}/api/likes/${myId}/${pid}`, { headers });
       } else {
-        await axios.post(`${API_BASE}/api/likes/${myId}/${pid}`);
+        const res = await axios.post(`${API_BASE}/api/likes/${myId}/${pid}`, {}, { headers });
+        if (res.data?.match) {
+          setMatchCelebration({ name: profileName }); // ✅ NEW
+        }
       }
     } catch (e) {
       console.error(e);
-      // rollback
       setLikedIds((prev) => {
         const next = new Set(prev);
         if (alreadyLiked) next.add(pid);
@@ -236,6 +293,13 @@ export default function Homepage() {
     { to: "/latters", label: "Inbox" },
     { to: "/info", label: "Info & Contact" },
   ]}
+      />
+
+      {/* ✅ NEW — match celebration popup */}
+      <MatchCelebration
+        show={!!matchCelebration}
+        name={matchCelebration?.name}
+        onClose={() => setMatchCelebration(null)}
       />
 
       <main style={{ padding: "14px" }}>
@@ -283,7 +347,7 @@ export default function Homepage() {
               <ProfileCard
                 p={shown}
                 isFav={likedIds.has(String(shown._id))}
-                onToggleFav={() => toggleFavorite(shown._id)}
+                onToggleFav={() => toggleFavorite(shown._id, shown.name || shown.username)}
                 onOpenImage={(url) =>
                   setLightbox({
                     url,

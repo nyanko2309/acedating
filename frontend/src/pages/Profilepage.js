@@ -93,6 +93,7 @@ export default function ProfilePage() {
   const [preference, setPreference] = useState("");
   const [info, setInfo] = useState("");
   const [contact, setContact] = useState(""); // ✅ free text
+  const [email, setEmail] = useState(""); // ✅ NEW — free text, used for password reset verification
 
   // store both url + public_id so we can delete old image later
   const [imageUrl, setImageUrl] = useState("");
@@ -101,6 +102,7 @@ export default function ProfilePage() {
   const headers = {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(userId ? { "X-User-Id": userId } : {}),
+    ...(token ? { "X-Session-Token": token } : {}),
   };
 
   const PROFILE_URL = userId ? `${API_BASE}/api/profile/${userId}` : null;
@@ -157,6 +159,7 @@ export default function ProfilePage() {
         setPreference(p?.preference || "");
         setInfo(p?.info || "");
         setContact(p?.contact || "");
+        setEmail(p?.email || ""); // ✅ NEW
 
         setImageUrl(p?.image_url || "");
         setImagePublicId(p?.image_public_id || "");
@@ -189,6 +192,7 @@ export default function ProfilePage() {
     setPreference(profile?.preference || "");
     setInfo(profile?.info || "");
     setContact(profile?.contact || "");
+    setEmail(profile?.email || ""); // ✅ NEW
 
     setImageUrl(profile?.image_url || "");
     setImagePublicId(profile?.image_public_id || "");
@@ -225,6 +229,7 @@ export default function ProfilePage() {
         preference: preference === "any" ? "" : preference,
         info,
         contact,
+        email, // ✅ NEW
         image_url: finalUrl,
         image_public_id: finalPublicId,
       };
@@ -379,6 +384,9 @@ export default function ProfilePage() {
 
                 {/* contact is FREE TEXT */}
                 <Field label="Contact" value={contact} setValue={setContact} edit={edit} />
+
+                {/* ✅ NEW — email, free text, used for password-reset verification */}
+                <Field label="Email" value={email} setValue={setEmail} edit={edit} type="email" />
 
                 {/* free text */}
                 <TextField label="Info" value={info} setValue={setInfo} edit={edit} maxLength={1000} />

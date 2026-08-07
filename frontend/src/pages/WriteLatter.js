@@ -61,7 +61,11 @@ export default function WriteLatter() {
         `${API_BASE}/api/writelatter/${userId}/${profile_id}`,
         { letter: letter.trim() },
         {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            "X-User-Id": userId,       // ✅ NEW
+            "X-Session-Token": token,  // ✅ NEW — required by require_session
+          },
           timeout: 15000,
         }
       );
@@ -208,7 +212,7 @@ export default function WriteLatter() {
               <textarea
                 value={letter}
                 onChange={(e) => setLetter(e.target.value)}
-                placeholder="Write a short intro… (who you are, what you’re looking for, a fun detail)"
+                placeholder="Write a short intro… (who you are, what you’re looking for, a fun detail).DONT FORGET TO ADD CONTCAT INFO SO YOU CAN HEAR BACK!"
                 maxLength={2000}
                 disabled={sending || alreadySent}
                 style={{ ...T.textarea, marginTop: 12, opacity: alreadySent ? 0.7 : 1 }}

@@ -1,19 +1,16 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
-from datetime import timezone
+
 from pymongo.errors import DuplicateKeyError
-import requests
-import time
-from django.http import JsonResponse
 from bson import ObjectId
 from django.contrib.auth.hashers import make_password, check_password
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+import cloudinary
 
 from . import dbcommands
 from .mongo import get_db
-import cloudinary
 
 
 # ----------------------------
@@ -60,7 +57,7 @@ def require_session(request, users, claimed_user_id):
     return uid, None
 
 
-# ✅ NEW — canonical preference values; "Any" is gone as an explicit value —
+# Canonical preference values; "Any" is gone as an explicit value —
 # an empty list now means "visible to everyone" instead.
 PREFERENCE_CANON = {"Woman", "Man", "Non-binary", "Other"}
 
@@ -143,7 +140,6 @@ class SignUpView(APIView):
         except Exception:
             return Response({"error": "age must be a number"}, status=400)
 
-        # ✅ CHANGED — was a stripped string, now a normalized list
         preference = parse_preference(data.get("preference"))
         romantic_orientation = (data.get("romantic_orientation") or "").strip()
         email = (data.get("email") or "").strip().lower()
@@ -297,11 +293,9 @@ class ProfilesListView(APIView):
                 q["_id"] = {"$ne": viewer_oid}
 
         if viewer_gender in {"Woman", "Man", "Non-binary", "Other"}:
-            # ✅ CHANGED — added {"preference": []} to explicitly match the
-            # new "empty array = anyone" case. Everything else is unchanged:
-            # {"preference": viewer_gender} still matches BOTH a legacy
-            # scalar string equal to viewer_gender AND a new array that
-            # contains viewer_gender — Mongo does this automatically.
+            # {"preference": viewer_gender} matches BOTH a legacy scalar
+            # string equal to viewer_gender AND a new array that contains
+            # viewer_gender — Mongo does this automatically.
             q["$or"] = [
                 {"preference": viewer_gender},
                 {"preference": []},
@@ -404,10 +398,6 @@ class ProfileView(APIView):
             except Exception:
                 return Response({"error": "Age must be a number"}, status=400)
 
-        # ✅ CHANGED — was a single "any" → "" check, now normalizes to a
-        # clean list via parse_preference (handles both list and legacy
-        # single-string payloads, so old frontends calling this endpoint
-        # wouldn't break either)
         if "preference" in update_fields:
             update_fields["preference"] = parse_preference(update_fields["preference"])
 
@@ -438,16 +428,10 @@ class CloudinaryDeleteView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-#==========================================================================Likes
-from datetime import datetime
-from bson import ObjectId
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 
-from .mongo import get_db
-
-
+# ----------------------------
+# Likes
+# ----------------------------
 class LikesView(APIView):
     def get(self, request, user_id, profile_id=None):
         db = get_db()
@@ -518,7 +502,10 @@ class LikesView(APIView):
 
         return Response({"ok": True}, status=status.HTTP_200_OK)
 
-#======================================================================================Latters
+
+# ----------------------------
+# Letters
+# ----------------------------
 class WriteLatterView(APIView):
     def post(self, request, user_id, profile_id):
         db = get_db()
@@ -674,10 +661,6 @@ class VerifySessionView(APIView):
         return Response({"valid": True}, status=200)
 
 
-HEALTH_URL = "https://acedating-new.onrender.com/api/health"
-from rest_framework.views import APIView
-from rest_framework.response import Response
-
 class health(APIView):
     authentication_classes = []
     permission_classes = []
@@ -709,3 +692,68 @@ class LikedByView(APIView):
             },
             status=200,
         )
+
+
+# ----------------------------
+# Random profile (single doc, DB-side random pick)
+# ----------------------------
+class RandomProfileView(APIView):
+    """
+    GET /api/randomprofile
+
+    Returns exactly ONE random profile using MongoDB's $sample aggregation
+    stage, so the cost stays roughly constant regardless of collection
+    size (no need to pull every id/profile to the client just to throw
+    away all but one).
+
+    Honors the same viewer-exclusion + preference-visibility rules as
+    ProfilesListView, so "random" still respects who's allowed to see whom.
+    """
+
+    def get(self, request):
+        db = get_db()
+        users = db["users"]
+
+        viewer_id = request.headers.get("X-User-Id") or request.query_params.get("viewer_id")
+        viewer_oid = oid(viewer_id) if viewer_id else None
+
+        viewer_gender = None
+        if viewer_oid:
+            viewer_doc = users.find_one({"_id": viewer_oid}, {"gender": 1})
+            viewer_gender = viewer_doc.get("gender") if viewer_doc else None
+
+        match_stage = {}
+
+        if viewer_oid:
+            match_stage["_id"] = {"$ne": viewer_oid}
+
+        if viewer_gender in {"Woman", "Man", "Non-binary", "Other"}:
+            # Same "empty/legacy preference = anyone" rule as the feed endpoint.
+            match_stage["$or"] = [
+                {"preference": viewer_gender},
+                {"preference": []},
+                {"preference": ""},
+                {"preference": "Any"},
+                {"preference": None},
+                {"preference": {"$exists": False}},
+            ]
+
+        pipeline = []
+        if match_stage:
+            pipeline.append({"$match": match_stage})
+
+        pipeline.append({"$sample": {"size": 1}})
+        pipeline.append({
+            "$project": {
+                "password_hash": 0,
+                "session_token": 0,
+                "liked": 0,
+            }
+        })
+
+        docs = list(users.aggregate(pipeline))
+
+        if not docs:
+            return Response({"error": "No profiles found"}, status=404)
+
+        return Response(serialize_mongo(docs[0]), status=200)

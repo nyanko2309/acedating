@@ -46,6 +46,65 @@ const AGE_OPTIONS = Array.from({ length: 83 }, (_, i) => {
   return { value: String(n), label: String(n) };
 });
 
+// ✅ NEW — mobile-only overrides (uses !important to beat inline `style={S.xxx}`).
+const PROFILE_MOBILE_CSS = `
+@media (max-width: 640px) {
+  .pp-main {
+    padding: 10px !important;
+  }
+
+  .pp-card {
+    padding: 14px !important;
+    border-radius: 14px !important;
+  }
+
+  .pp-headerrow {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .pp-headerrow-actions {
+    width: 100% !important;
+  }
+
+  .pp-headerrow-actions button {
+    flex: 1 1 auto !important;
+  }
+
+  .pp-grid {
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+  }
+
+  .pp-avatarcol {
+    align-items: center !important;
+  }
+
+  .pp-avatarwrap {
+    width: 150px !important;
+    height: 150px !important;
+    margin: 0 auto !important;
+  }
+
+  .pp-formcol input,
+  .pp-formcol select,
+  .pp-formcol textarea {
+    font-size: 16px !important; /* prevents iOS auto-zoom on focus */
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  .preference-checkbox-row-pp {
+    gap: 8px !important;
+  }
+
+  .preference-checkbox-row-pp label {
+    font-size: 12px !important;
+  }
+}
+`;
+
 function normalizeOptions(options) {
   return (options || []).map((o) => (typeof o === "string" ? { value: o, label: o } : o));
 }
@@ -274,6 +333,9 @@ export default function ProfilePage() {
 
   return (
     <div style={S.page}>
+      {/* ✅ NEW — mobile media-query overrides */}
+      <style>{PROFILE_MOBILE_CSS}</style>
+
       <TopBar
         links={[
           { to: "/home", label: "Home" },
@@ -285,16 +347,16 @@ export default function ProfilePage() {
         ]}
       />
 
-      <main style={S.main}>
-        <div style={S.card}>
-          <div style={S.headerRow}>
+      <main style={S.main} className="pp-main">
+        <div style={S.card} className="pp-card">
+          <div style={S.headerRow} className="pp-headerrow">
             <div>
               <div style={S.title}>Your Profile</div>
               <div style={S.sub}>View and edit your public profile info.</div>
             </div>
 
             {!loading && (
-              <div style={{ display: "flex", gap: 8 }}>
+              <div className="pp-headerrow-actions" style={{ display: "flex", gap: 8 }}>
                 {!edit ? (
                   <button style={S.btn} onClick={() => setEdit(true)} type="button">
                     Edit
@@ -318,9 +380,9 @@ export default function ProfilePage() {
           {loading ? (
             <div style={S.loading}>Loading…</div>
           ) : (
-            <div style={S.grid}>
-              <div style={S.avatarCol}>
-                <div style={S.avatarWrap}>
+            <div style={S.grid} className="pp-grid">
+              <div style={S.avatarCol} className="pp-avatarcol">
+                <div style={S.avatarWrap} className="pp-avatarwrap">
                   <img
                     src={imageUrl || "https://via.placeholder.com/220x220?text=No+Image"}
                     alt="avatar"
@@ -353,7 +415,7 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              <div style={S.formCol}>
+              <div style={S.formCol} className="pp-formcol">
                 <Field label="Username" value={username} setValue={setUsername} edit={edit} />
                 <Field label="Name" value={name} setValue={setName} edit={edit} />
 
@@ -395,7 +457,7 @@ export default function ProfilePage() {
                     </div>
                   ) : (
                     <>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                      <div className="preference-checkbox-row-pp" style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                         {PREFERENCE_OPTIONS.map((opt) => (
                           <label
                             key={opt}

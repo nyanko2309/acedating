@@ -51,6 +51,81 @@ const widerCardOverrideCss = `
   }
 `;
 
+// ✅ NEW — mobile-only overrides (uses !important to beat loginPageCss).
+// Tweak the 480px breakpoint or values as needed.
+const LOGIN_MOBILE_CSS = `
+@media (max-width: 480px) {
+  .page-header {
+    padding: 0 10px !important;
+  }
+
+  .page-title {
+    font-size: 26px !important;
+    letter-spacing: 1px !important;
+  }
+
+  .page-sub {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+
+  .wrapper {
+    padding: 0 8px !important;
+  }
+
+  .flip-card__front,
+  .flip-card__back {
+    padding: 16px 14px !important;
+    width: 96vw !important;
+  }
+
+  .title {
+    font-size: 20px !important;
+  }
+
+  .notice {
+    font-size: 11px !important;
+  }
+
+  .flip-card__form {
+    gap: 10px !important;
+  }
+
+  .flip-card__input,
+  select.flip-card__input,
+  textarea.flip-card__input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 16px !important; /* prevents iOS auto-zoom on focus */
+  }
+
+  .flip-card__btn,
+  .flip-card__btn2 {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .avatar-upload-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .avatar-upload-row input[type="file"] {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .preference-checkbox-row {
+    gap: 8px !important;
+  }
+
+  .preference-checkbox-row label {
+    font-size: 12px !important;
+  }
+}
+`;
+
 const ABOUT_QUESTIONS = [
   {
     key: "lookingFor",
@@ -235,6 +310,8 @@ function LoginPage() {
     <>
       <style>{loginPageCss}</style>
       <style>{widerCardOverrideCss}</style>
+      {/* ✅ NEW — mobile media-query overrides */}
+      <style>{LOGIN_MOBILE_CSS}</style>
 
       {loadingPopup && (
         <div className="loading-overlay">
@@ -410,6 +487,7 @@ function LoginPage() {
                       Preference (who can see you)
                     </div>
                     <div
+                      className="preference-checkbox-row"
                       style={{
                         display: "flex",
                         flexWrap: "wrap",
@@ -447,6 +525,7 @@ function LoginPage() {
                   </div>
 
                   <div
+                    className="avatar-upload-row"
                     style={{
                       width: "min(320px, 100%)",
                       display: "flex",

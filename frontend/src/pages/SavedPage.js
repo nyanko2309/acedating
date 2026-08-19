@@ -22,6 +22,88 @@ const CITY_OPTIONS = [
   { value: "other-israel", label: "Other / Not sure" },
 ];
 
+// ✅ NEW — mobile-only overrides (uses !important to beat inline `style={S.xxx}`).
+const SAVED_MOBILE_CSS = `
+@media (max-width: 640px) {
+  .sp-shell {
+    padding: 8px !important;
+  }
+
+  .sp-filterscard {
+    padding: 14px !important;
+  }
+
+  .sp-filtersheader {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .sp-filtersheader button {
+    width: 100% !important;
+  }
+
+  .sp-matchesrow {
+    width: 100% !important;
+  }
+
+  .sp-matchesrow button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .sp-filtersgrid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .__hp_grid__ {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .sp-card {
+    padding: 0 !important;
+  }
+
+  .sp-cardtop {
+    padding: 12px 12px 0 !important;
+  }
+
+  .sp-avatar {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .sp-modal {
+    width: 94vw !important;
+    max-width: 94vw !important;
+    max-height: 88vh !important;
+    padding: 14px !important;
+  }
+
+  .sp-modalimg {
+    max-width: 88vw !important;
+    max-height: 65vh !important;
+  }
+
+  .searchRowMobile {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .searchRowMobile input {
+    font-size: 16px !important; /* prevents iOS auto-zoom */
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .searchRowMobile button {
+    width: 100% !important;
+  }
+}
+`;
+
 function normalizeText(x) {
   return (x ?? "").toString().toLowerCase();
 }
@@ -126,11 +208,12 @@ function ProfileCard({ p, isFav, isMatch, onToggleFav, onOpenImage }) {
   return (
     <div
       style={S.card}
+      className="sp-card"
       onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-4px)")}
       onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
     >
-      <div style={S.cardTop}>
-        <div style={S.avatar}>
+      <div style={S.cardTop} className="sp-cardtop">
+        <div style={S.avatar} className="sp-avatar">
           <button
             type="button"
             onClick={() => onOpenImage(imgSrc)}
@@ -438,6 +521,9 @@ export default function Savedpage() {
 
   return (
     <div style={S.page}>
+      {/* ✅ NEW — mobile media-query overrides */}
+      <style>{SAVED_MOBILE_CSS}</style>
+
       <TopBar
         links={[
           { to: "/home", label: "Home" },
@@ -453,7 +539,7 @@ export default function Savedpage() {
         {/* Lightbox */}
         {lightbox && (
           <div style={S.overlay} onMouseDown={() => setLightbox(null)}>
-            <div style={S.modal} onMouseDown={(e) => e.stopPropagation()}>
+            <div style={S.modal} className="sp-modal" onMouseDown={(e) => e.stopPropagation()}>
               <div style={S.modalTop}>
                 <div style={S.modalTitle}>{lightbox.title || "Profile image"}</div>
                 <button
@@ -468,17 +554,17 @@ export default function Savedpage() {
 
               <div style={S.modalBody}>
                 <div style={S.modalImgWrap}>
-                  <img src={lightbox.url} alt="profile large" style={S.modalImg} />
+                  <img src={lightbox.url} alt="profile large" style={S.modalImg} className="sp-modalimg" />
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        <div style={S.shell}>
+        <div style={S.shell} className="sp-shell">
           {/* Filters card */}
-          <div style={S.filtersCard}>
-            <div style={S.filtersHeader}>
+          <div style={S.filtersCard} className="sp-filterscard">
+            <div style={S.filtersHeader} className="sp-filtersheader">
               <div>
                 <div style={S.filtersTitle}>Search & Filters</div>
                 <div style={S.filtersHint}>
@@ -493,6 +579,7 @@ export default function Savedpage() {
 
             {/* Matches toggle row */}
             <div
+              className="sp-matchesrow"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -527,10 +614,10 @@ export default function Savedpage() {
               </span>
             </div>
 
-            <div style={S.filtersGrid}>
+            <div style={S.filtersGrid} className="sp-filtersgrid">
               <div style={S.searchWrap}>
                 <div style={S.msLabel}>Search</div>
-                <div style={S.searchRow}>
+                <div style={S.searchRow} className="searchRowMobile">
                   <input
                     style={S.searchInput}
                     placeholder="type… (name, city, info, contact, etc)"

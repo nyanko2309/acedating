@@ -6,6 +6,91 @@ import { S, ensureHomepageStyles, PLACEHOLDER_AVATAR_URL } from "./homepageStyle
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
 
+// ✅ NEW — mobile-only overrides + the new "shuffle" button look.
+const RANDOM_MOBILE_CSS = `
+@media (max-width: 640px) {
+  .rp-shell {
+    padding: 8px !important;
+  }
+
+  .rp-cardwrap {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .rp-card {
+    padding: 0 !important;
+  }
+
+  .rp-cardtop {
+    padding: 12px 12px 0 !important;
+  }
+
+  .rp-avatar {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .rp-actions {
+    width: 100% !important;
+  }
+
+  .rp-shuffle-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .rp-modal {
+    width: 94vw !important;
+    max-width: 94vw !important;
+    max-height: 88vh !important;
+    padding: 14px !important;
+  }
+
+  .rp-modalimg {
+    max-width: 88vw !important;
+    max-height: 65vh !important;
+  }
+}
+
+/* ✅ NEW — "Show another" button styling (replaces the old debug-looking bar) */
+.rp-shuffle-btn {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: white;
+  background: #6f4c8b;
+  box-shadow: 0 8px 24px rgba(111, 76, 139, 0.35);
+  transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
+}
+
+.rp-shuffle-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(111, 76, 139, 0.45);
+  filter: brightness(1.08);
+}
+
+.rp-shuffle-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 6px 16px rgba(111, 76, 139, 0.35);
+}
+
+.rp-shuffle-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(0.2);
+}
+
+`;
+
 /** ✅ NEW — small fun popup shown when a mutual like happens */
 function MatchCelebration({ show, name, onClose }) {
   useEffect(() => {
@@ -28,6 +113,7 @@ function MatchCelebration({ show, name, onClose }) {
         justifyContent: "center",
         background: "rgba(0,0,0,0.45)",
         cursor: "pointer",
+        padding: 16,
       }}
     >
       <style>{`
@@ -42,6 +128,7 @@ function MatchCelebration({ show, name, onClose }) {
           color: "white",
           boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
           animation: "matchPop 420ms cubic-bezier(.34,1.56,.64,1)",
+          maxWidth: "90vw",
         }}
       >
         <div style={{ fontSize: 44, marginBottom: 6 }}>💘✨</div>
@@ -65,11 +152,12 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
   return (
     <div
       style={S.card}
+      className="rp-card"
       onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-4px)")}
       onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
     >
-      <div style={S.cardTop}>
-        <div style={S.avatar}>
+      <div style={S.cardTop} className="rp-cardtop">
+        <div style={S.avatar} className="rp-avatar">
           <button
             type="button"
             onClick={() => onOpenImage(imgSrc)}
@@ -142,12 +230,7 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage }) {
   );
 }
 
-function pickRandom(list) {
-  if (!list?.length) return null;
-  return list[Math.floor(Math.random() * list.length)];
-}
-
-export default function Homepage() {
+export default function RandomPage() {
   const navigate = useNavigate();
   const myId = useMemo(() => String(localStorage.getItem("user_id") || ""), []);
 
@@ -171,12 +254,12 @@ export default function Homepage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Data
-  const [profiles, setProfiles] = useState([]);
-  const [initialLoading, setInitialLoading] = useState(true);
-
-  // One shown profile
+  // ✅ CHANGED — no more client-side pool. `shown` is fetched directly,
+  // one profile per request, from /api/randomprofile (DB-side $sample).
   const [shown, setShown] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [shuffling, setShuffling] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   // Favorites
   const [likedIds, setLikedIds] = useState(() => new Set());
@@ -203,46 +286,42 @@ export default function Homepage() {
     localStorage.setItem("favorites", JSON.stringify(Array.from(likedIds)));
   }, [likedIds]);
 
-  // Fetch ALL profiles once, then choose a random one
-  useEffect(() => {
-    (async () => {
-      try {
-        setInitialLoading(true);
+  // ✅ CHANGED — fetches ONE random profile from the backend instead of
+  // pulling a pool of ids/profiles and picking client-side. Used both for
+  // the initial load and every "Show another" click.
+  const fetchRandom = async ({ isInitial = false } = {}) => {
+    try {
+      if (isInitial) setInitialLoading(true);
+      else setShuffling(true);
+      setErrorMsg("");
 
-        // If your backend supports big limits, this is simplest.
-        // Otherwise, tell me and I’ll adapt to cursor pagination properly.
-        const params = { limit: 24 };
-        const res = await axios.get(`${API_BASE}/api/allprofiles`, { params, headers: { "X-User-Id": myId } })
-        const items = Array.isArray(res.data?.items) ? res.data.items : [];
+      const res = await axios.get(`${API_BASE}/api/randomprofile`, {
+        headers: { "X-User-Id": myId },
+      });
 
-        // remove self
-        const pool = items.filter((p) => !(myId && String(p._id) === myId));
-
-        setProfiles(pool);
-        setShown(pickRandom(pool));
-      } catch (e) {
-        console.error(e);
-        setProfiles([]);
-        setShown(null);
-      } finally {
-        setInitialLoading(false);
+      setShown(res.data || null);
+    } catch (e) {
+      console.error(e);
+      setShown(null);
+      if (e?.response?.status === 404) {
+        setErrorMsg("No profiles found.");
+      } else {
+        setErrorMsg("Couldn't load a profile — try again.");
       }
-    })();
+    } finally {
+      if (isInitial) setInitialLoading(false);
+      setShuffling(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRandom({ isInitial: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myId]);
 
   const showAnother = () => {
-    if (!profiles.length) return;
-
-    // try to avoid showing the same one twice in a row
-    if (profiles.length === 1) return setShown(profiles[0]);
-
-    let next = pickRandom(profiles);
-    let guard = 0;
-    while (shown && next && String(next._id) === String(shown._id) && guard < 10) {
-      next = pickRandom(profiles);
-      guard += 1;
-    }
-    setShown(next);
+    if (shuffling) return;
+    fetchRandom({ isInitial: false });
   };
 
   // ✅ CHANGED — accepts profileName so the popup can say who you matched with,
@@ -284,6 +363,9 @@ export default function Homepage() {
 
   return (
     <div style={S.page}>
+      {/* ✅ NEW — mobile media-query overrides + shuffle button styling */}
+      <style>{RANDOM_MOBILE_CSS}</style>
+
       <TopBar
          links={[
     { to: "/home", label: "Home" },
@@ -306,7 +388,7 @@ export default function Homepage() {
         {/* Lightbox */}
         {lightbox && (
           <div style={S.overlay} onMouseDown={() => setLightbox(null)}>
-            <div style={S.modal} onMouseDown={(e) => e.stopPropagation()}>
+            <div style={S.modal} className="rp-modal" onMouseDown={(e) => e.stopPropagation()}>
               <div style={S.modalTop}>
                 <div style={S.modalTitle}>{lightbox.title || "Profile image"}</div>
                 <button type="button" style={S.modalClose} onClick={() => setLightbox(null)} aria-label="Close">
@@ -316,26 +398,29 @@ export default function Homepage() {
 
               <div style={S.modalBody}>
                 <div style={S.modalImgWrap}>
-                  <img src={lightbox.url} alt="profile large" style={S.modalImg} />
+                  <img src={lightbox.url} alt="profile large" style={S.modalImg} className="rp-modalimg" />
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        <div style={S.shell}>
-          <div style={S.resultsHeader}>
-            <div style={S.resultsTitle}>Random Profile</div>
-            <div style={S.resultsMeta}>
-              {initialLoading ? "Fetching profiles…" : profiles.length ? `${profiles.length} profiles in pool` : "No profiles"}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, marginBottom: 12, backgroundColor: "purple", width: 50 }}>
-            <button type="button" style={S.primaryBtn} onClick={showAnother} disabled={!profiles.length}>
-              Show another
+        <div style={S.shell} className="rp-shell">
+          {/* ✅ CHANGED — redesigned button, no more debug purple/width:50 bar */}
+          <div className="rp-actions" style={{ display: "flex", marginBottom: 14 }}>
+            <button
+              type="button"
+              className={`rp-shuffle-btn${shuffling ? " is-loading" : ""}`}
+              onClick={showAnother}
+              disabled={initialLoading || shuffling}
+            >
+              {shuffling ? "Shuffling…" : "Show another"}
             </button>
           </div>
+
+          {errorMsg && !initialLoading && (
+            <div style={{ ...S.emptyText, marginBottom: 12 }}>{errorMsg}</div>
+          )}
 
           {initialLoading ? (
             <div style={S.loadingBox}>
@@ -343,7 +428,7 @@ export default function Homepage() {
               <div>Loading…</div>
             </div>
           ) : shown ? (
-            <div style={{ maxWidth: 520 }}>
+            <div style={{ maxWidth: 520, opacity: shuffling ? 0.6 : 1, transition: "opacity 150ms ease" }} className="rp-cardwrap">
               <ProfileCard
                 p={shown}
                 isFav={likedIds.has(String(shown._id))}

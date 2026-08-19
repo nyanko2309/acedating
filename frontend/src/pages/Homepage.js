@@ -37,6 +37,132 @@ const ROMANTIC_ORIENTATION_OPTIONS = [
   "Other",
 ];
 
+// ✅ NEW — mobile-only overrides. Uses !important so it wins over the
+// inline `style={S.xxx}` objects coming from homepageStyles.js.
+// Tweak the breakpoint (640px) or any values below to taste.
+const HOMEPAGE_MOBILE_CSS = `
+@media (max-width: 640px) {
+  .hp-shell {
+    padding: 8px !important;
+    max-width: 100% !important;
+  }
+
+  .hp-controlbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .hp-searchwrap {
+    width: 100% !important;
+  }
+
+  .__hp_filter_btn__ {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .hp-swiperow {
+    gap: 2px !important;
+  }
+
+  .__hp_side_nav__ {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    font-size: 18px !important;
+    padding: 0 !important;
+  }
+
+  .hp-singlecardwrap {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .hp-stackfar,
+  .hp-stacknear {
+    display: none !important;
+  }
+
+  .hp-card {
+    padding: 12px !important;
+    border-radius: 14px !important;
+  }
+
+  .hp-cardtop {
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .hp-avatar {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .hp-nameblock {
+    min-width: 0 !important;
+  }
+
+  .hp-name {
+    font-size: 16px !important;
+    white-space: normal !important;
+  }
+
+  .hp-headeractions {
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 6px !important;
+  }
+
+  .__hp_msg_btn__ {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+
+  .hp-badges {
+    flex-wrap: wrap !important;
+  }
+
+  .hp-detailgrid {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+
+  .hp-modal,
+  .hp-filtermodal {
+    width: 94vw !important;
+    max-width: 94vw !important;
+    max-height: 88vh !important;
+    padding: 14px !important;
+  }
+
+  .hp-modalimg {
+    max-width: 88vw !important;
+    max-height: 65vh !important;
+  }
+
+  .hp-filtersgrid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .hp-filtersheader {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .msWrap,
+  .hp-filtersgrid > div {
+    width: 100% !important;
+  }
+
+  .quickSearchInputMobile {
+    font-size: 16px !important; /* prevents iOS auto-zoom on focus */
+  }
+}
+`;
+
 function normalizeText(x) {
   return (x ?? "").toString().toLowerCase();
 }
@@ -69,6 +195,7 @@ function MatchCelebration({ show, name, onClose }) {
         justifyContent: "center",
         background: "rgba(0,0,0,0.45)",
         cursor: "pointer",
+        padding: 16,
       }}
     >
       <style>{`
@@ -83,6 +210,7 @@ function MatchCelebration({ show, name, onClose }) {
           color: "white",
           boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
           animation: "matchPop 420ms cubic-bezier(.34,1.56,.64,1)",
+          maxWidth: "90vw",
         }}
       >
         <div style={{ fontSize: 44, marginBottom: 6 }}>💘✨</div>
@@ -128,7 +256,7 @@ function MultiSelect({ label, options, valueSet, onChangeSet, placeholder = "Any
   }, [options, valueSet]);
 
   return (
-    <div style={S.msWrap} ref={ref}>
+    <div style={S.msWrap} className="msWrap" ref={ref}>
       <div style={S.msLabel}>{label}</div>
 
       <button
@@ -188,10 +316,10 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage, onWriteMessage }) {
   const imgSrc = imgOk && p.image_url ? p.image_url : fallback;
 
   return (
-    <div style={S.card} className="__hp_card__">
+    <div style={S.card} className="__hp_card__ hp-card">
       {/* Avatar + display name + username on the left, compact actions on the right */}
-      <div style={S.cardTop}>
-        <div style={S.avatar}>
+      <div style={S.cardTop} className="hp-cardtop">
+        <div style={S.avatar} className="hp-avatar">
           <button
             type="button"
             onClick={() => onOpenImage(imgSrc)}
@@ -208,12 +336,12 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage, onWriteMessage }) {
           </button>
         </div>
 
-        <div style={S.nameBlock}>
-          <div style={S.name}>{p.name}</div>
+        <div style={S.nameBlock} className="hp-nameblock">
+          <div style={S.name} className="hp-name">{p.name}</div>
           <div style={S.user}>@{p.username}</div>
         </div>
 
-        <div style={S.headerActions}>
+        <div style={S.headerActions} className="hp-headeractions">
           <button type="button" className="__hp_msg_btn__" style={S.msgBtnCompact} onClick={onWriteMessage}>
             Message
           </button>
@@ -229,16 +357,16 @@ function ProfileCard({ p, isFav, onToggleFav, onOpenImage, onWriteMessage }) {
         </div>
       </div>
 
-      <div style={S.cardBody}>
+      <div style={S.cardBody} className="hp-cardbody">
         {/* 3. Short profile summary / tags */}
-        <div style={S.badges}>
+        <div style={S.badges} className="hp-badges">
           <span style={S.badge}>{p.age ?? "?"}</span>
           <span style={S.badge}>{p.gender ?? "—"}</span>
           <span style={S.badge}>{p.city ?? "—"}</span>
         </div>
 
         {/* 4. Orientation / romantic orientation / looking for */}
-        <div style={S.detailGrid}>
+        <div style={S.detailGrid} className="hp-detailgrid">
           <div style={S.detailRow}>
             <div style={S.detailKey}>Orientation</div>
             <div style={S.detailVal}>{p.orientation ?? "—"}</div>
@@ -577,8 +705,9 @@ export default function Homepage() {
   if (!sessionChecked) {
     return (
       <div style={S.page}>
+        <style>{HOMEPAGE_MOBILE_CSS}</style>
         <main style={{ padding: "14px" }}>
-          <div style={S.shell}>
+          <div style={S.shell} className="hp-shell">
             <div style={S.loadingBox}>
               <div style={S.spinner} />
               <div>Checking your session…</div>
@@ -591,6 +720,9 @@ export default function Homepage() {
 
   return (
     <div style={S.page}>
+      {/* ✅ NEW — mobile media-query overrides, safe to keep for desktop too */}
+      <style>{HOMEPAGE_MOBILE_CSS}</style>
+
       <TopBar
         links={[
           { to: "/home", label: "Home" },
@@ -613,7 +745,7 @@ export default function Homepage() {
         {/* Lightbox */}
         {lightbox && (
           <div style={S.overlay} onMouseDown={() => setLightbox(null)}>
-            <div style={S.modal} onMouseDown={(e) => e.stopPropagation()}>
+            <div style={S.modal} className="hp-modal" onMouseDown={(e) => e.stopPropagation()}>
               <div style={S.modalTop}>
                 <div style={S.modalTitle}>{lightbox.title || "Profile image"}</div>
                 <button type="button" style={S.modalClose} onClick={() => setLightbox(null)} aria-label="Close">
@@ -623,7 +755,7 @@ export default function Homepage() {
 
               <div style={S.modalBody}>
                 <div style={S.modalImgWrap}>
-                  <img src={lightbox.url} alt="profile large" style={S.modalImg} />
+                  <img src={lightbox.url} alt="profile large" style={S.modalImg} className="hp-modalimg" />
                 </div>
               </div>
             </div>
@@ -633,8 +765,8 @@ export default function Homepage() {
         {/* Filters modal */}
         {filtersOpen && (
           <div style={S.overlay} onMouseDown={() => setFiltersOpen(false)}>
-            <div style={S.filterModalCard} onMouseDown={(e) => e.stopPropagation()}>
-              <div style={S.filtersHeader}>
+            <div style={S.filterModalCard} className="hp-filtermodal" onMouseDown={(e) => e.stopPropagation()}>
+              <div style={S.filtersHeader} className="hp-filtersheader">
                 <div>
                   <div style={S.filtersTitle}>Search & Filters</div>
                   <div style={S.filtersHint}>
@@ -653,7 +785,7 @@ export default function Homepage() {
               </div>
 
               <div style={S.filterModalBody}>
-                <div style={S.filtersGrid}>
+                <div style={S.filtersGrid} className="hp-filtersgrid">
                   <div style={S.searchWrap}>
                     <div style={S.msLabel}>Search</div>
                     <div style={S.searchRow}>
@@ -715,10 +847,10 @@ export default function Homepage() {
           </div>
         )}
 
-        <div style={S.shell}>
+        <div style={S.shell} className="hp-shell">
           {/* Unified search + filters toolbar */}
-          <div style={S.controlBar}>
-            <div style={S.searchInputWrap}>
+          <div style={S.controlBar} className="hp-controlbar">
+            <div style={S.searchInputWrap} className="hp-searchwrap">
               <span style={S.searchIcon}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                   <circle cx="11" cy="11" r="7" />
@@ -726,7 +858,7 @@ export default function Homepage() {
                 </svg>
               </span>
               <input
-                className="__hp_quick_search__"
+                className="__hp_quick_search__ quickSearchInputMobile"
                 style={S.quickSearchInput}
                 placeholder="Quick search…"
                 value={q}
@@ -759,7 +891,7 @@ export default function Homepage() {
               <div>Loading…</div>
             </div>
           ) : current ? (
-            <div style={S.swipeRow}>
+            <div style={S.swipeRow} className="hp-swiperow">
               <button
                 type="button"
                 className="__hp_side_nav__"
@@ -770,9 +902,9 @@ export default function Homepage() {
                 ‹
               </button>
 
-              <div style={S.singleCardWrap}>
-                <div style={S.stackCardFar} />
-                <div style={S.stackCardNear} />
+              <div style={S.singleCardWrap} className="hp-singlecardwrap">
+                <div style={S.stackCardFar} className="hp-stackfar" />
+                <div style={S.stackCardNear} className="hp-stacknear" />
 
                 <div
                   key={animKey}
